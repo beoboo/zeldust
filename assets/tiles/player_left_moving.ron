@@ -1,0 +1,12 @@
+(
+  name: "Player left moving",
+  tile: Animated((
+    speed: 0.1,
+    frames: [
+      "player/left_0.png",
+      "player/left_1.png",
+      "player/left_2.png",
+      "player/left_3.png",
+    ]
+  ))
+)

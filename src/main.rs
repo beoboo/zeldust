@@ -7,7 +7,7 @@ use bevy::core::FixedTimestep;
 use bevy::prelude::*;
 use bevy_tileset::prelude::{Tileset, TilesetPlugin, Tilesets};
 use crate::map::WorldMap;
-use crate::player::{animate_player, move_camera, move_player, Player, PlayerDirectionEvent, PlayerPositionEvent};
+use crate::player::{animate_player, move_camera, move_player, PlayerPositionEvent, spawn_player};
 
 use crate::settings::{FPS, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE};
 
@@ -55,7 +55,7 @@ pub struct MapSize {
 }
 
 pub struct GameAssets {
-    player: Handle<Tileset>
+    player: Handle<Tileset>,
 }
 
 fn main() {
@@ -85,12 +85,11 @@ fn main() {
         )
         .add_system_set(
             SystemSet::on_update(AppState::SpawnMap)
-                .with_system(spawn_player_and_cameras)
-                .with_system(spawn_tiles)
+                .with_system(spawn_map)
         )
         .add_system_set(
             SystemSet::on_update(AppState::Playing)
-                .with_run_criteria(FixedTimestep::step(1.0 / FPS as f64))
+                // .with_run_criteria(FixedTimestep::step(1.0 / FPS as f64))
                 .with_system(move_player)
                 .with_system(move_camera)
                 .with_system(animate_player)
@@ -100,7 +99,6 @@ fn main() {
             position_tiles,
         )
         .add_event::<PlayerPositionEvent>()
-        .add_event::<PlayerDirectionEvent>()
         .run();
 }
 
@@ -166,14 +164,27 @@ fn setup_bounds(
     }
 }
 
-fn spawn_player_and_cameras(
-    tilesets: Tilesets,
-    assets: Res<GameAssets>,
+fn spawn_map(
     mut commands: Commands,
     mut app_state: ResMut<State<AppState>>,
     map_size: Res<MapSize>,
+    world_map: Res<WorldMap>,
+    asset_server: Res<AssetServer>,
+    tilesets: Tilesets,
+    assets: Res<GameAssets>,
 ) {
-    println!("spawn player and cameras");
+    spawn_cameras(&mut commands, &map_size);
+    spawn_tiles(&mut commands, world_map, asset_server);
+    spawn_player(&mut commands, tilesets, assets, &map_size);
+
+    app_state.set(AppState::Playing).unwrap();
+}
+
+fn spawn_cameras(
+    commands: &mut Commands,
+    map_size: &Res<MapSize>,
+) {
+    println!("spawn cameras");
 
     let (x, y) = (map_size.width as f32 / 2., map_size.height as f32 / 2.);
 
@@ -183,28 +194,10 @@ fn spawn_player_and_cameras(
     commands.spawn_bundle(camera)
         .insert(Position { x, y, layer: 999 })
     ;
-
-    let player_assets = tilesets.get(&assets.player).unwrap();
-
-    let (index, _) = player_assets.select_tile("Player up idle").unwrap();
-    // let handle = player_assets.get_tile_handle(index.base_index()).unwrap();
-    // dbg!(handle);
-
-    commands.spawn_bundle(SpriteSheetBundle {
-        sprite: TextureAtlasSprite::new(*index.base_index()),
-        texture_atlas: player_assets.atlas().clone_weak(),
-        ..Default::default()
-    })
-        .insert(Player::default())
-        .insert(Position { x, y, layer: 1 })
-        .insert(Size::default())
-    ;
-
-    app_state.set(AppState::Playing).unwrap();
 }
 
 fn spawn_tiles(
-    mut commands: Commands,
+    commands: &mut Commands,
     world_map: Res<WorldMap>,
     asset_server: Res<AssetServer>,
 ) {
