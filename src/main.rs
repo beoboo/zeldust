@@ -2,6 +2,7 @@ mod settings;
 mod player;
 mod map;
 mod layer;
+mod ui;
 
 use bevy::core::FixedTimestep;
 use bevy::prelude::*;
@@ -10,6 +11,7 @@ use crate::map::WorldMap;
 use crate::player::{animate_player, move_camera, move_player, PlayerPositionEvent, spawn_player};
 
 use crate::settings::{FPS, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE};
+use crate::ui::show_ui;
 
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -93,6 +95,7 @@ fn main() {
                 .with_system(move_player)
                 .with_system(move_camera)
                 .with_system(animate_player)
+                .with_system(show_ui)
         )
         .add_system_to_stage(
             CoreStage::PostUpdate,
@@ -194,6 +197,7 @@ fn spawn_cameras(
     commands.spawn_bundle(camera)
         .insert(Position { x, y, layer: 999 })
     ;
+    commands.spawn_bundle(UiCameraBundle::default());
 }
 
 fn spawn_tiles(
