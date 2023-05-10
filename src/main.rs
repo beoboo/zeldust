@@ -1,28 +1,28 @@
 mod settings;
+mod player;
 
+use bevy::core::FixedTimestep;
 use bevy::prelude::*;
 use bevy_tileset::prelude::*;
+use crate::player::{move_player, Player};
 
-use crate::settings::{build_world, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE};
+use crate::settings::{build_world, FPS, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE};
 
 #[derive(Default)]
 struct WorldMap {
     data: Vec<String>,
 }
 
-#[derive(Default)]
-struct MyTileset {
-    handle: Option<Handle<Tileset>>,
+#[derive(Component, Clone, Copy, PartialEq)]
+pub struct Position {
+    x: f32,
+    y: f32,
 }
 
-#[derive(Component, Clone, Copy, PartialEq, Eq)]
-struct Position {
-    x: u32,
-    y: u32,
-}
-
-fn load_tiles(mut my_tileset: ResMut<MyTileset>, asset_server: Res<AssetServer>) {
-    my_tileset.handle = Some(asset_server.load("tilesets/test.ron"));
+#[derive(SystemLabel, Debug, Hash, PartialEq, Eq, Clone)]
+enum GameLabel {
+    WorldMap,
+    SpawnTiles,
 }
 
 fn main() {
@@ -35,14 +35,19 @@ fn main() {
         })
         .insert_resource(ClearColor(Color::rgb(0.04, 0.04, 0.04)))
         .add_plugins(DefaultPlugins)
-        .add_plugin(TilesetPlugin::default())
-        // /== Required === //
         .init_resource::<WorldMap>()
-        .init_resource::<MyTileset>()
-        .add_startup_system(load_world_map)
         .add_startup_system(build_camera)
-        .add_system(spawn_tiles)
-        .add_system(position_tiles)
+        .add_startup_system(load_world_map.label(GameLabel::WorldMap))
+        .add_startup_system(spawn_tiles.label(GameLabel::SpawnTiles).after(GameLabel::WorldMap))
+        .add_system_set(
+            SystemSet::new()
+                .with_run_criteria(FixedTimestep::step(1.0 / FPS as f64))
+                .with_system(move_player)
+        )
+        .add_system_to_stage(
+            CoreStage::PostUpdate,
+            position_tiles,
+        )
         .run();
 }
 
@@ -59,31 +64,32 @@ fn build_camera(
 fn spawn_tiles(
     mut commands: Commands,
     world_map: Res<WorldMap>,
-    mut has_built_map: Local<bool>,
     asset_server: Res<AssetServer>,
 ) {
-    if *has_built_map {
-        return;
-    }
-
     // Spawn the world
     for (row_idx, row) in world_map.data.iter().enumerate() {
         for (col_idx, ch) in row.chars().enumerate() {
             print!("{}", ch);
+            let x = col_idx as f32 * TILE_SIZE as f32;
+            let y = row_idx as f32 * TILE_SIZE as f32;
+
             match ch {
                 'p' => {
                     commands.spawn_bundle(SpriteBundle {
                         texture: asset_server.load("test/player.png"),
                         ..Default::default()
-                    }).insert(Position { x: col_idx as u32, y: row_idx as u32 });
+                    })
+                        .insert(Position { x, y })
+                        .insert(Player::default() )
+                    ;
                 }
                 'x' => {
                     commands.spawn_bundle(SpriteBundle {
-                        // texture: rock_handle.clone_weak(),
                         texture: asset_server.load("test/rock.png"),
-                        // texture: rock_handle.clone(),
                         ..Default::default()
-                    }).insert(Position { x: col_idx as u32, y: row_idx as u32 });
+                    })
+                        .insert(Position { x, y })
+                    ;
                 }
                 _ => {
                     if ch != ' ' {
@@ -94,25 +100,21 @@ fn spawn_tiles(
         }
         println!();
     }
-
-    *has_built_map = true;
 }
 
 fn position_tiles(windows: Res<Windows>, mut q: Query<(&Position, &mut Transform)>) {
     fn convert(pos: f32, bound_dim: f32) -> f32 {
-        // let num_tiles = bound_dim / TILE_SIZE;
         let tile_size = TILE_SIZE as f32;
-        pos * tile_size - (bound_dim / 2.) + (tile_size / 2.)
-    //      // (bound_dim / 2.) - pos * tile_size
+        pos - (bound_dim / 2.) + (tile_size / 2.)
     }
 
     let window = windows.get_primary().unwrap();
     for (pos, mut transform) in q.iter_mut() {
         transform.translation = Vec3::new(
-            convert(pos.x as f32, window.width() as f32),
-            -convert(pos.y as f32, window.height() as f32),
+            convert(pos.x, window.width() as f32),
+            -convert(pos.y, window.height() as f32),
             0.0,
-        )
+        );
     }
 }
 
