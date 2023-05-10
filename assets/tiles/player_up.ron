@@ -1,0 +1,12 @@
+(
+  name: "Player up",
+  tile: Animated((
+    speed: 2.25,
+    frames: [
+      "player/up_0.png",
+      "player/up_1.png",
+      "player/up_2.png",
+      "player/up_3.png",
+    ]
+  ))
+)

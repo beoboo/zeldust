@@ -1,0 +1,10 @@
+(
+    name: Some("Player"),
+    id: 0,
+    tiles: {
+        0: "../tiles/player_up_idle.ron",
+        1: "../tiles/player_left_idle.ron",
+        2: "../tiles/player_down_idle.ron",
+        3: "../tiles/player_right_idle.ron",
+    }
+)

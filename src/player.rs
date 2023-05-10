@@ -1,17 +1,11 @@
 use bevy::prelude::*;
 use bevy::sprite::collide_aabb::{collide, Collision};
-use crate::{MapBorder, Position, Size};
+use bevy_tileset::prelude::Tilesets;
+use crate::{GameAssets, MapBorder, Position, Size};
 
 #[derive(Component)]
 pub struct Player {
     speed: f32,
-}
-
-pub struct PlayerPositionEvent(Position);
-
-enum Axis {
-    Horizontal,
-    Vertical,
 }
 
 impl Default for Player {
@@ -22,30 +16,57 @@ impl Default for Player {
     }
 }
 
+pub enum Direction {
+    Idle,
+    Left,
+    Up,
+    Right,
+    Down
+}
+
+pub struct PlayerPositionEvent(Position);
+pub struct PlayerDirectionEvent(Direction);
+
 pub fn move_player(
     keyboard_input: Res<Input<KeyCode>>,
     mut players: Query<(&Player, &Transform, &Size, &mut Position), Without<MapBorder>>,
     borders: Query<(&MapBorder, &Transform, &Size, &Position), Without<Player>>,
     mut position_writer: EventWriter<PlayerPositionEvent>,
+    mut direction_writer: EventWriter<PlayerDirectionEvent>,
 ) {
-    let mut direction = Vec2::default();
+    let mut vec = Vec2::default();
+    let mut direction = Direction::Left;
+
     for key in keyboard_input.get_pressed() {
-        match key {
-            KeyCode::Left => direction.x = -1.0,
-            KeyCode::Right => direction.x = 1.0,
-            KeyCode::Up => direction.y = -1.0,
-            KeyCode::Down => direction.y = 1.0,
-            _ => ()
+        direction = match key {
+            KeyCode::Left => {
+                vec.x = -1.0;
+                Direction::Left
+            },
+            KeyCode::Right => {
+                vec.x = 1.0;
+                Direction::Right
+            },
+            KeyCode::Up => {
+                vec.y = -1.0;
+                Direction::Up
+            },
+            KeyCode::Down => {
+                vec.y = 1.0;
+                Direction::Down
+            },
+            _ => Direction::Idle
+
         }
     }
 
-    if direction != Vec2::default() {
-        let direction = direction.normalize();
+    if vec != Vec2::default() {
         let (player, transform, size, mut position) = players.single_mut();
-        position.x += player.speed * direction.x;
-        position.y += player.speed * direction.y;
+        let vec = vec.normalize();
+        position.x += player.speed * vec.x;
+        position.y += player.speed * vec.y;
 
-        borders.iter().for_each(|(b, t, s, p)| {
+        borders.iter().for_each(|(_, t, s, p)| {
             let v1 = Vec2::new(s.width, s.height);
             let v2 = Vec2::new(size.width, size.height);
 
@@ -59,7 +80,8 @@ pub fn move_player(
             }
         });
 
-        position_writer.send(PlayerPositionEvent(*position))
+        position_writer.send(PlayerPositionEvent(*position));
+        direction_writer.send(PlayerDirectionEvent(direction));
     }
 }
 
@@ -70,5 +92,27 @@ pub fn move_camera(
     if let Some(player_position) = position_reader.iter().next() {
         let mut camera_position = query.single_mut();
         *camera_position = player_position.0;
+    }
+}
+
+pub fn animate_player(
+    tilesets: Tilesets,
+    assets: Res<GameAssets>,
+    mut query: Query<&mut TextureAtlasSprite, With<Player>>,
+    mut direction_reader: EventReader<PlayerDirectionEvent>,
+) {
+    if let Some(direction) = direction_reader.iter().next() {
+        let assets = tilesets.get(&assets.player).unwrap();
+
+        let (index, _) = match direction.0 {
+            Direction::Left => assets.select_tile("Player left idle").unwrap(),
+            Direction::Right => assets.select_tile("Player right idle").unwrap(),
+            Direction::Up => assets.select_tile("Player up idle").unwrap(),
+            Direction::Down => assets.select_tile("Player down idle").unwrap(),
+            _ => return
+        };
+
+        let mut sprite = query.single_mut();
+        sprite.index = *index.base_index();
     }
 }

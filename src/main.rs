@@ -5,8 +5,9 @@ mod layer;
 
 use bevy::core::FixedTimestep;
 use bevy::prelude::*;
+use bevy_tileset::prelude::{Tileset, TilesetPlugin, Tilesets};
 use crate::map::WorldMap;
-use crate::player::{move_camera, move_player, Player, PlayerPositionEvent};
+use crate::player::{animate_player, move_camera, move_player, Player, PlayerDirectionEvent, PlayerPositionEvent};
 
 use crate::settings::{FPS, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE};
 
@@ -53,8 +54,14 @@ pub struct MapSize {
     height: u32,
 }
 
+pub struct GameAssets {
+    player: Handle<Tileset>
+}
+
 fn main() {
     App::new()
+        .add_plugins(DefaultPlugins)
+        .add_plugin(TilesetPlugin::default())
         .insert_resource(WindowDescriptor {
             title: "Zeldust".to_string(),
             width: SCREEN_WIDTH as f32,
@@ -66,22 +73,19 @@ fn main() {
             WorldMap::new()
                 .load_layer("assets/map/map_FloorBlocks.csv")
         )
-        .add_plugins(DefaultPlugins)
         .add_state(AppState::Load)
         .add_system_set(
             SystemSet::on_enter(AppState::Load)
                 .with_system(load_background)
+                .with_system(load_assets)
         )
         .add_system_set(
             SystemSet::on_update(AppState::Load)
                 .with_system(setup_bounds)
         )
         .add_system_set(
-            SystemSet::on_enter(AppState::SpawnMap)
+            SystemSet::on_update(AppState::SpawnMap)
                 .with_system(spawn_player_and_cameras)
-        )
-        .add_system_set(
-            SystemSet::on_exit(AppState::SpawnMap)
                 .with_system(spawn_tiles)
         )
         .add_system_set(
@@ -89,12 +93,14 @@ fn main() {
                 .with_run_criteria(FixedTimestep::step(1.0 / FPS as f64))
                 .with_system(move_player)
                 .with_system(move_camera)
+                .with_system(animate_player)
         )
         .add_system_to_stage(
             CoreStage::PostUpdate,
             position_tiles,
         )
         .add_event::<PlayerPositionEvent>()
+        .add_event::<PlayerDirectionEvent>()
         .run();
 }
 
@@ -115,12 +121,22 @@ fn load_background(
     commands.insert_resource(MapBackground { handle: image });
 }
 
+fn load_assets(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+) {
+    let assets = GameAssets {
+        player: asset_server.load("tilesets/player.ron")
+    };
+
+    commands.insert_resource(assets);
+}
+
 fn setup_bounds(
     mut commands: Commands,
     mut app_state: ResMut<State<AppState>>,
     mut ev_asset: EventReader<AssetEvent<Image>>,
     mut map_query: Query<&mut Position, With<Map>>,
-    windows: Res<Windows>,
     assets: Res<Assets<Image>>,
     bg: Res<MapBackground>,
 ) {
@@ -151,9 +167,10 @@ fn setup_bounds(
 }
 
 fn spawn_player_and_cameras(
+    tilesets: Tilesets,
+    assets: Res<GameAssets>,
     mut commands: Commands,
     mut app_state: ResMut<State<AppState>>,
-    asset_server: Res<AssetServer>,
     map_size: Res<MapSize>,
 ) {
     println!("spawn player and cameras");
@@ -161,14 +178,21 @@ fn spawn_player_and_cameras(
     let (x, y) = (map_size.width as f32 / 2., map_size.height as f32 / 2.);
 
     let mut camera = OrthographicCameraBundle::new_2d();
-    camera.orthographic_projection.scale = 5.;
+    // camera.orthographic_projection.scale = 5.;
 
     commands.spawn_bundle(camera)
         .insert(Position { x, y, layer: 999 })
     ;
 
-    commands.spawn_bundle(SpriteBundle {
-        texture: asset_server.load("test/player.png"),
+    let player_assets = tilesets.get(&assets.player).unwrap();
+
+    let (index, _) = player_assets.select_tile("Player up idle").unwrap();
+    // let handle = player_assets.get_tile_handle(index.base_index()).unwrap();
+    // dbg!(handle);
+
+    commands.spawn_bundle(SpriteSheetBundle {
+        sprite: TextureAtlasSprite::new(*index.base_index()),
+        texture_atlas: player_assets.atlas().clone_weak(),
         ..Default::default()
     })
         .insert(Player::default())

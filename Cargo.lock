@@ -3341,6 +3341,5 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy_tileset",
- "bevy_tileset_tiles",
  "csv",
 ]
