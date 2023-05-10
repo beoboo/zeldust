@@ -6,11 +6,14 @@ use bevy_rapier2d::prelude::*;
 use parse_display::Display;
 
 use crate::{from_position, from_translation, GameAssets, MapSize, Position, Size, StaticCollider};
-use crate::constants::ATTACK_COOLDOWN;
+use crate::constants::{ATTACK_COOLDOWN, TILE_SIZE};
 use crate::frames::TexturePack;
 
 #[derive(Component, Deref)]
 pub struct AttackTimer(Timer);
+
+#[derive(Component, Deref, DerefMut)]
+pub struct AnimationTimer(pub Timer);
 
 #[derive(Component, Reflect)]
 pub struct Player {
@@ -31,9 +34,8 @@ impl Default for Player {
     }
 }
 
-#[derive(Component, Deref, DerefMut)]
-pub struct AnimationTimer(pub Timer);
-
+#[derive(Component)]
+pub struct Weapon;
 
 #[derive(Debug, Clone, Copy, Display, PartialEq, Reflect)]
 #[display(style = "snake_case")]
@@ -178,12 +180,14 @@ pub fn update_player_position(
 }
 
 pub fn render_player(
+    mut commands: Commands,
     time: Res<Time>,
-    mut query: Query<(&Player, &mut AnimationTimer, &mut TextureAtlasSprite)>,
+    mut query: Query<(&Player, &Transform, &mut AnimationTimer, &mut TextureAtlasSprite)>,
     asset_server: Res<AssetServer>,
+    assets: Res<GameAssets>,
     textures: Res<Assets<TexturePack>>,
 ) {
-    let (player, mut timer, mut sprite) = query.single_mut();
+    let (player, transform, mut timer, mut sprite) = query.single_mut();
 
     let direction = player.direction;
     let mut status = player.status.to_string();
@@ -219,16 +223,78 @@ pub fn render_player(
     }
 }
 
-pub fn end_attack(
-    mut commands: Commands, time: Res<Time>,
-    mut query: Query<(Entity, &mut Player, &mut AttackTimer)>,
+pub fn spawn_weapon(
+    mut commands: Commands,
+    player_q: Query<(&Player, &Transform)>,
+    weapon_q: Query<Entity, With<Weapon>>,
+    asset_server: Res<AssetServer>,
+    assets: Res<GameAssets>,
+    textures: Res<Assets<TexturePack>>,
 ) {
-    for (entity, mut player, mut timer) in query.iter_mut() {
+    let Err(_) = weapon_q.get_single() else {
+        return;
+    };
+
+    let (player, transform) = player_q.single();
+    let mut transform = transform.clone();
+
+    if !player.is_attacking {
+        return;
+    }
+
+    let weapon = "sword";
+    let direction = player.direction;
+
+    let name = format!("{direction}_{weapon}.png");
+    let handle = asset_server.load("textures/weapons.json");
+    let pack = textures.get(&handle).expect("Texture pack must exist");
+    let index = pack.index_of(&name);
+    let frame = &pack.frames[&name];
+
+    match direction {
+        Direction::Down => {
+            transform.translation.y -= frame.frame.h + 2.0;
+        },
+        Direction::Left => {
+            transform.translation.x -= (TILE_SIZE + frame.frame.w) / 2.0;
+            transform.translation.y -= frame.frame.h / 2.0;
+            // transform.translation.y -= TILE_SIZE;
+        },
+        Direction::Right => {
+            transform.translation.x += (TILE_SIZE + frame.frame.w) / 2.0;
+            transform.translation.y -= frame.frame.h / 2.0;
+        },
+        Direction::Up => {
+            transform.translation.y += (TILE_SIZE + frame.frame.h) / 2.0;
+        },
+    }
+
+    commands.spawn((
+        SpriteSheetBundle {
+            sprite: TextureAtlasSprite::new(index),
+            texture_atlas: assets.weapons.clone(),
+            transform,
+            ..Default::default()
+        },
+        Weapon
+    ));
+}
+
+pub fn end_attack(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut player_q: Query<(Entity, &mut Player, &mut AttackTimer)>,
+    mut weapon_q: Query<Entity, With<Weapon>>,
+) {
+    for (entity, mut player, mut timer) in player_q.iter_mut() {
         timer.0.tick(time.delta());
 
         if timer.0.finished() {
             player.is_attacking = false;
             commands.entity(entity).remove::<AttackTimer>();
+            let weapon = weapon_q.single();
+
+            commands.entity(weapon).despawn();
         }
     }
 }

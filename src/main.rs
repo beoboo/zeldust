@@ -8,11 +8,11 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_prototype_lyon::prelude::*;
 use bevy_rapier2d::prelude::*;
 
+use crate::constants::{CAMERA_SCALE, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE};
 use crate::frames::TexturePack;
 // use crate::collisions::handle_collisions;
 use crate::map::{LayerType, WorldMap};
-use crate::player::{render_player, end_attack, handle_input, move_camera, Player, PlayerPositionEvent, spawn_player, update_player_position};
-use crate::constants::{CAMERA_SCALE, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE};
+use crate::player::{end_attack, handle_input, move_camera, Player, PlayerPositionEvent, render_player, spawn_player, spawn_weapon, update_player_position};
 
 mod constants;
 mod player;
@@ -65,6 +65,7 @@ pub struct StaticCollider;
 #[derive(Resource)]
 pub struct GameAssets {
     player: Handle<TextureAtlas>,
+    weapons: Handle<TextureAtlas>,
     layers: HashMap<LayerType, Handle<TextureAtlas>>,
 }
 
@@ -120,6 +121,7 @@ fn main() {
             update_player_position,
             move_camera,
             render_player,
+            spawn_weapon,
             end_attack,
             // handle_collisions,
         ).in_set(OnUpdate(AppState::Playing)))
@@ -148,7 +150,7 @@ fn load_assets(
     asset_server: Res<AssetServer>,
     mut assets: ResMut<LoadingAssets>,
 ) {
-    for ty in vec!["player", "objects"] {
+    for ty in vec!["grass", "objects", "player", "weapons"] {
         for asset in vec!["json", "png"] {
             let path = format!("textures/{ty}.{asset}");
             let handle = asset_server.load_untyped(path);
@@ -204,20 +206,19 @@ fn prepare_assets(
     commands.insert_resource(size);
 
     let player_atlas_handle = build_texture_atlas("player", &asset_server, &mut images, &mut texture_atlases, &tiles_data);
+    let weapons_atlas_handle = build_texture_atlas("weapons", &asset_server, &mut images, &mut texture_atlases, &tiles_data);
 
     let mut layers = HashMap::new();
 
-    let texture_handle = asset_server.load("images/grass.png");
-    let texture_atlas =
-        TextureAtlas::from_grid(texture_handle, Vec2::new(64.0, 64.0), 24, 1, None, None);
-    layers.insert(LayerType::Grass, texture_atlases.add(texture_atlas));
+    let texture_atlas_handle = build_texture_atlas("grass", &asset_server, &mut images, &mut texture_atlases, &tiles_data);
+    layers.insert(LayerType::Grass, texture_atlas_handle);
 
     let texture_atlas_handle = build_texture_atlas("objects", &asset_server, &mut images, &mut texture_atlases, &tiles_data);
-
     layers.insert(LayerType::Objects, texture_atlas_handle);
 
     let assets = GameAssets {
         player: player_atlas_handle,
+        weapons: weapons_atlas_handle,
         layers,
     };
 
@@ -229,8 +230,6 @@ fn build_texture_atlas(ty: &str, asset_server: &Res<AssetServer>, images: &mut R
 
     let handle = asset_server.load(format!("{path}.json"));
     let pack = textures.get(&handle).expect("Texture pack not loaded");
-
-    println!("{pack:?}");
 
     let handle = asset_server.load(format!("{path}.png"));
     let image = images.get(&handle).expect("Image not loaded");
