@@ -1,7 +1,17 @@
+use std::thread::current;
 use bevy::prelude::*;
 use parse_display::Display;
+use rand::Rng;
 
-use crate::{entities::Player, events::SwitchMagic, frames::TexturePack, GameAssets};
+use crate::{
+    collisions::{MAGIC_COLLISION_GROUP, OBJECTS_COLLISION_GROUP, PLAYER_MOVE_COLLISION_GROUP},
+    constants::TILE_SIZE,
+    entities::{EnergyRecoveryTimer, Player},
+    events::{EmitParticleEffect, SwitchMagic},
+    frames::TexturePack,
+    particles::{spawn_particles, ParticleEffect},
+    GameAssets,
+};
 
 #[derive(Component)]
 pub struct PlayerMagic;
@@ -46,23 +56,47 @@ impl From<u8> for Magic {
     }
 }
 
-pub fn spawn_magic(
-    mut commands: Commands,
+pub fn cast_spell(
     current_magic: Res<Magic>,
-    player_q: Query<(Entity, &Player)>,
-    magic_q: Query<Entity, With<PlayerMagic>>,
-    asset_server: Res<AssetServer>,
-    assets: Res<GameAssets>,
-    textures: Res<Assets<TexturePack>>,
+    mut player_q: Query<(&mut Player, &Transform)>,
+    mut particle_effect_writer: EventWriter<EmitParticleEffect>,
 ) {
-    let Err(_) = magic_q.get_single() else {
-        return;
-    };
+    let (mut player, transform) = player_q.single_mut();
 
-    let (entity, player) = player_q.single();
-
-    if !player.is_attacking() {
+    if !player.is_casting_spell() || !player.can_cast_spell {
         return;
+    }
+
+    player.can_cast_spell = false;
+
+    println!("Casting {}", *current_magic);
+    //
+    // println!("{} {}",
+    //          MAGIC_COLLISION_GROUP.memberships.bits() & PLAYER_MOVE_COLLISION_GROUP.filters.bits() != 0,
+    //          MAGIC_COLLISION_GROUP.filters.bits() & PLAYER_MOVE_COLLISION_GROUP.memberships.bits() != 0,
+    // );
+
+    if player.cast_spell(current_magic.cost()) {
+        match *current_magic {
+            Magic::Heal => {
+                player.heal(current_magic.strength());
+                particle_effect_writer.send(EmitParticleEffect::new(ParticleEffect::Aura, transform.translation));
+                particle_effect_writer.send(EmitParticleEffect::new(ParticleEffect::Heal, transform.translation));
+            },
+            Magic::Flame => {
+                let offset = player.direction.as_vec2().extend(0.);
+                for i in 1..6 {
+                    let mut offset = offset * i as f32 * TILE_SIZE;
+                    let mut rng = rand::thread_rng();
+                    offset.x += rng.gen_range(-TILE_SIZE / 3.0..TILE_SIZE / 3.0);
+                    offset.y += rng.gen_range(-TILE_SIZE / 3.0..TILE_SIZE / 3.0);
+                    particle_effect_writer.send(EmitParticleEffect::new(
+                        ParticleEffect::Flame,
+                        transform.translation + offset,
+                    ));
+                }
+            },
+        }
     }
 
     // let direction = player.direction;
@@ -101,5 +135,15 @@ pub fn spawn_magic(
 pub fn switch_magic(mut current_magic: ResMut<Magic>, mut reader: EventReader<SwitchMagic>) {
     for _ in reader.iter() {
         *current_magic = current_magic.next();
+    }
+}
+
+pub fn recover_energy(time: Res<Time>, mut player_q: Query<(&mut Player, &mut EnergyRecoveryTimer)>) {
+    let (mut player, mut timer) = player_q.single_mut();
+
+    timer.0.tick(time.delta());
+
+    if timer.0.finished() {
+        player.energy += 1;
     }
 }

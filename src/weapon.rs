@@ -1,10 +1,7 @@
 use std::time::Duration;
 
 use bevy::prelude::*;
-use bevy_rapier2d::{
-    prelude::{ActiveEvents, Collider},
-    render::ColliderDebugColor,
-};
+use bevy_rapier2d::prelude::*;
 use parse_display::Display;
 
 use crate::{

@@ -1,15 +1,23 @@
-use std::{
-    ops::{Div, Sub},
-    time::Duration,
-};
+use std::time::Duration;
 
-use bevy::{prelude::*, utils::HashMap};
+use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 use crate::{
+    clamped::ClampedU32,
     collisions::PLAYER_MOVE_COLLISION_GROUP,
-    constants::{ANIMATION_DURATION, ATTACK_DURATION, TILE_SIZE},
-    entities::{render_animation, AnimatedEntity, Animation, AttackTimer, Direction, HitTimer, Status},
+    constants::{ANIMATION_DURATION, ATTACK_DURATION, ENERGY_RECOVERY_DURATION, TILE_SIZE},
+    entities::{
+        render_animation,
+        AnimatedEntity,
+        Animation,
+        AttackTimer,
+        CastSpellTimer,
+        Direction,
+        EnergyRecoveryTimer,
+        HitTimer,
+        Status,
+    },
     frames::TexturePack,
     from_position,
     weapon::PlayerWeapon,
@@ -17,45 +25,17 @@ use crate::{
     GameAssets,
 };
 
-#[derive(Clone, Copy, Reflect)]
-pub struct ClampedU32 {
-    value: u32,
-    max: u32,
-}
-
-impl ClampedU32 {
-    pub fn new(value: u32, max: u32) -> Self {
-        Self { value, max }
-    }
-    pub fn ratio(&self) -> f32 {
-        self.value as f32 / self.max as f32
-    }
-}
-
-impl Sub<u32> for ClampedU32 {
-    type Output = Self;
-
-    fn sub(mut self, rhs: u32) -> Self::Output {
-        if self.value > rhs {
-            self.value -= rhs;
-        } else {
-            self.value = 0;
-        }
-
-        self
-    }
-}
-
 #[derive(Component, Reflect)]
 pub struct Player {
     pub health: ClampedU32,
     pub energy: ClampedU32,
-    pub speed: f32,
-    pub damage: u32,
-    pub magic: u32,
+    pub speed: ClampedU32,
+    pub damage: ClampedU32,
+    pub magic: ClampedU32,
     pub status: Status,
     pub direction: Direction,
     pub frame: usize,
+    pub can_cast_spell: bool,
 }
 
 impl Default for Player {
@@ -63,12 +43,13 @@ impl Default for Player {
         Self {
             health: ClampedU32::new(50, 100),
             energy: ClampedU32::new(48, 60),
-            speed: 5.0,
-            damage: 10,
-            magic: 4,
+            speed: ClampedU32::new(5, 5),
+            damage: ClampedU32::new(10, 10),
+            magic: ClampedU32::new(4, 4),
             status: Status::Idle,
             direction: Direction::Down,
             frame: 0,
+            can_cast_spell: true,
         }
     }
 }
@@ -79,7 +60,7 @@ impl Player {
     }
 
     pub fn damage(&self) -> u32 {
-        self.damage
+        self.damage.value()
     }
 
     pub fn is_moving(&self) -> bool {
@@ -87,11 +68,28 @@ impl Player {
     }
 
     pub fn is_attacking(&self) -> bool {
-        self.status == Status::Attack
+        matches!(self.status, Status::Attack)
+    }
+
+    pub fn is_casting_spell(&self) -> bool {
+        matches!(self.status, Status::CastSpell)
     }
 
     pub fn hit(&mut self, damage: u32) {
         self.health = self.health - damage;
+    }
+
+    pub fn cast_spell(&mut self, cost: u32) -> bool {
+        if self.energy.value() >= cost {
+            self.energy -= cost;
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn heal(&mut self, strength: u32) {
+        self.health += strength;
     }
 }
 
@@ -103,12 +101,19 @@ impl AnimatedEntity for Player {
     fn texture_name(&self) -> String {
         let postfix = if self.is_moving() { "_0" } else { "" };
 
-        format!("player/{}/{}{postfix}.png", self.status, self.direction)
+        let status_name = match self.status {
+            Status::Idle => "idle",
+            Status::Move(_) => "move",
+            _ => "attack",
+        };
+
+        format!("player/{status_name}/{}{postfix}.png", self.direction)
     }
 
     fn num_frames(&self) -> usize {
         match self.status {
             Status::Attack => 1,
+            Status::CastSpell => 1,
             Status::Idle => 1,
             Status::Move(_) => 4,
         }
@@ -130,14 +135,15 @@ pub fn spawn_player(commands: &mut Commands, window: &Window, assets: &Res<GameA
             LockedAxes::ROTATION_LOCKED,
             Velocity::zero(),
             Animation::new(ANIMATION_DURATION),
+            EnergyRecoveryTimer(Timer::new(ENERGY_RECOVERY_DURATION, TimerMode::Repeating)),
         ))
         .with_children(|parent| {
             parent.spawn((
                 Collider::cuboid(TILE_SIZE / 2.0, TILE_SIZE / 4.0),
                 Transform::from_xyz(0.0, -TILE_SIZE / 4.0, 0.0),
                 ColliderDebugColor(Color::RED),
-                ActiveEvents::COLLISION_EVENTS,
                 PLAYER_MOVE_COLLISION_GROUP.clone(),
+                ActiveEvents::COLLISION_EVENTS,
             ));
         });
 }
@@ -169,6 +175,22 @@ pub fn end_player_attack(
             if let Ok(weapon) = weapon_q.get_single() {
                 commands.entity(weapon).despawn();
             };
+        }
+    }
+}
+
+pub fn end_player_spell_cast(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut player_q: Query<(Entity, &mut Player, &mut CastSpellTimer)>,
+) {
+    if let Ok((entity, mut player, mut timer)) = player_q.get_single_mut() {
+        timer.0.tick(time.delta());
+
+        if timer.0.finished() {
+            player.status = Status::Idle;
+            player.can_cast_spell = true;
+            commands.entity(entity).remove::<CastSpellTimer>();
         }
     }
 }

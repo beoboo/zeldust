@@ -8,5 +8,6 @@ pub const CAMERA_SCALE: f32 = 2.;
 
 pub const SWITCH_ITEM_DURATION: Duration = Duration::from_millis(200);
 pub const ANIMATION_DURATION: Duration = Duration::from_millis(150);
+pub const ENERGY_RECOVERY_DURATION: Duration = Duration::from_millis(600);
 pub const ATTACK_DURATION: Duration = Duration::from_millis(500);
 pub const HIT_DURATION: Duration = Duration::from_millis(400);

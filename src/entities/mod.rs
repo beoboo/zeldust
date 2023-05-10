@@ -18,6 +18,12 @@ pub struct AttackTimer(pub Timer);
 #[derive(Component, Deref, DerefMut)]
 pub struct HitTimer(pub Timer);
 
+#[derive(Component, Deref, DerefMut)]
+pub struct EnergyRecoveryTimer(pub Timer);
+
+#[derive(Component, Deref, DerefMut)]
+pub struct CastSpellTimer(pub Timer);
+
 #[derive(Component, Reflect)]
 pub struct Attackable {
     health: u32,
@@ -44,6 +50,7 @@ impl Attackable {
 pub enum Status {
     Idle,
     Attack,
+    CastSpell,
     #[display("move")]
     Move(Vec2),
 }
@@ -69,6 +76,17 @@ impl From<Vec2> for Direction {
             Direction::Right
         } else {
             Direction::Down
+        }
+    }
+}
+
+impl Direction {
+    pub fn as_vec2(self) -> Vec2 {
+        match self {
+            Self::Up => Vec2::Y,
+            Self::Down => Vec2::NEG_Y,
+            Self::Left => Vec2::NEG_X,
+            Self::Right => Vec2::X,
         }
     }
 }

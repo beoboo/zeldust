@@ -14,46 +14,32 @@ use parse_display::Display;
 
 use crate::{
     camera::{move_camera, spawn_camera},
-    collisions::{handle_collisions, handle_player_collisions, handle_weapon_collisions, OBJECTS_COLLISION_GROUP},
+    collisions::{
+        handle_collisions, handle_magic_collisions, handle_player_collisions, handle_weapon_collisions,
+        OBJECTS_COLLISION_GROUP,
+    },
     constants::{SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE},
     debug::{can_spawn, DEBUG_PHYSICS, MAX_ENEMIES, MAX_TILES},
     entities::{
-        end_enemy_attack,
-        end_player_attack,
-        handle_enemy_hit,
-        handle_player_hit,
-        move_enemy,
-        render_enemy,
-        render_player,
-        spawn_enemy,
-        spawn_player,
-        update_depth,
-        Attackable,
-        Enemy,
-        Player,
+        end_enemy_attack, end_player_attack, end_player_spell_cast, handle_enemy_hit, handle_player_hit, move_enemy,
+        render_enemy, render_player, spawn_enemy, spawn_player, update_depth, Attackable, Enemy, Player,
     },
-    events::{EmitParticleEffect, PlayerCollision, SwitchMagic, SwitchWeapon, WeaponCollision},
+    events::{EmitParticleEffect, MagicCollision, PlayerCollision, SwitchMagic, SwitchWeapon, WeaponCollision},
     frames::TexturePack,
     input::handle_input,
-    magic::{spawn_magic, switch_magic, Magic},
+    magic::{cast_spell, recover_energy, switch_magic, Magic},
     map::{LayerType, WorldMap},
     particles::{animate_particles, spawn_particles},
     ui::{
-        change_magic_item,
-        change_weapon_item,
-        end_switch_magic,
-        end_switch_weapon,
-        spawn_ui,
-        update_energy_ui,
-        update_health_ui,
-        MagicItemBox,
-        WeaponItemBox,
+        change_magic_item, change_weapon_item, end_switch_magic, end_switch_weapon, spawn_ui, update_energy_ui,
+        update_health_ui, MagicItemBox, WeaponItemBox,
     },
     weapon::{spawn_weapon, switch_weapon, Weapon},
     widgets::WidgetsPlugin,
 };
 
 mod camera;
+mod clamped;
 mod collisions;
 mod constants;
 mod debug;
@@ -132,13 +118,13 @@ fn main() {
     let mut app = App::new();
 
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "Zeldust".to_string(),
-                resolution: WindowResolution::new(SCREEN_WIDTH as f32, SCREEN_HEIGHT as f32),
-                ..default()
-            }),
+        primary_window: Some(Window {
+            title: "Zeldust".to_string(),
+            resolution: WindowResolution::new(SCREEN_WIDTH as f32, SCREEN_HEIGHT as f32),
             ..default()
-        }))
+        }),
+        ..default()
+    }))
         .add_plugin(WorldInspectorPlugin::default())
         // .add_plugin(TilesetPlugin::default())
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
@@ -154,6 +140,7 @@ fn main() {
         .add_event::<SwitchMagic>()
         .add_event::<SwitchWeapon>()
         .add_event::<PlayerCollision>()
+        .add_event::<MagicCollision>()
         .add_event::<WeaponCollision>()
         .add_event::<EmitParticleEffect>()
         .insert_resource(ClearColor(Color::hex("70deee").unwrap()))
@@ -165,50 +152,55 @@ fn main() {
         .add_systems((load_ground, load_assets, finish_loading).in_set(OnUpdate(AppState::Loading)))
         .add_system(prepare_assets.in_schedule(OnExit(AppState::Loading)))
         .add_systems((
-                // debug_tiles,
-                spawn_ground,
-                spawn_camera,
-                spawn_tiles.after(spawn_camera),
-                spawn_ui.after(spawn_tiles),
-            )
-                .in_schedule(OnEnter(AppState::Playing)),
+                         // debug_tiles,
+                         spawn_ground,
+                         spawn_camera,
+                         spawn_tiles.after(spawn_camera),
+                         spawn_ui.after(spawn_tiles),
+                     ).in_schedule(OnEnter(AppState::Playing)),
         )
         .add_systems((
-                move_camera,
-                switch_weapon,
-                switch_magic,
-                change_magic_item,
-                change_weapon_item,
-                end_switch_magic,
-                end_switch_weapon,
-                update_energy_ui,
-                update_health_ui,
-            )
-                .in_set(OnUpdate(AppState::Playing)),
+                         move_camera,
+                         update_energy_ui,
+                         update_health_ui,
+                     ).in_set(OnUpdate(AppState::Playing)),
         )
         .add_systems((
-                handle_input,
-                spawn_weapon,
-                spawn_magic,
-                end_enemy_attack,
-                handle_enemy_hit,
-                handle_player_hit,
-                end_player_attack,
-                move_enemy,
-                render_player,
-                render_enemy,
-                update_depth,
-                handle_collisions,
-                handle_player_collisions,
-                handle_weapon_collisions,
-            )
-                .in_set(OnUpdate(AppState::Playing)),
+                         switch_weapon,
+                         spawn_weapon,
+                         change_weapon_item,
+                         end_switch_weapon,
+                         end_player_attack,
+                         handle_weapon_collisions,
+                     ).in_set(OnUpdate(AppState::Playing)),
+        )
+        .add_systems((
+                         switch_magic,
+                         cast_spell,
+                         change_magic_item,
+                         end_switch_magic,
+                         end_player_spell_cast,
+                         handle_magic_collisions,
+                         recover_energy,
+                     ).in_set(OnUpdate(AppState::Playing)),
+        )
+        .add_systems((
+                         handle_input,
+                         end_enemy_attack,
+                         handle_enemy_hit,
+                         handle_player_hit,
+                         move_enemy,
+                         render_player,
+                         render_enemy,
+                         update_depth,
+                         handle_collisions,
+                         handle_player_collisions,
+                     )                         .in_set(OnUpdate(AppState::Playing)),
         )
         .add_systems((
                          spawn_particles,
                          animate_particles,
-            )
-                .in_set(OnUpdate(AppState::Playing)),
+                     )                         .in_set(OnUpdate(AppState::Playing)),
         );
 
     if DEBUG_PHYSICS {
@@ -219,7 +211,7 @@ fn main() {
 }
 
 fn load_map(mut commands: Commands) {
-    // commands.insert_resource(WorldMap::debug_enemy());
+    // commands.insert_resource(WorldMap::debug_grass());
     commands.insert_resource(
         WorldMap::new()
             .load_layer(LayerType::Blocks, "assets/map/map_FloorBlocks.csv")
@@ -466,16 +458,19 @@ fn spawn_tile(
         ))
         .with_children(|parent| {
             let mut child = parent.spawn((
-                Collider::cuboid(rect.width() / 2.0, collider_height / 2.0),
-                Transform::from_xyz(0.0, -offset, 0.0),
-                ColliderDebugColor(Color::ALICE_BLUE),
-            ));
+                // Collider::cuboid(rect.width() / 2.0, collider_height / 2.0),
+                // Transform::from_xyz(0.0, -offset, 0.0),
+                // ColliderDebugColor(Color::BLUE),
+                ));
 
             if layer_type.is_attackable() {
+                println!("Rect: {:?} {:?}", rect.width(), rect.height());
                 child.insert((
+                    Collider::cuboid(rect.width() / 2.0, rect.height() / 2.0),
                     Attackable::new(1),
                     OBJECTS_COLLISION_GROUP.clone(),
                     ActiveEvents::COLLISION_EVENTS,
+                    ColliderDebugColor(Color::BLACK),
                 ));
             }
         });

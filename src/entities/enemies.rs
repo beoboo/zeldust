@@ -1,7 +1,8 @@
+use std::time::Duration;
+
 use bevy::{math::Vec3Swizzles, prelude::*};
 use bevy_rapier2d::prelude::*;
 use parse_display::Display;
-use std::time::Duration;
 
 use crate::{
     collisions::{ENEMY_ATTACK_COLLISION_GROUP, ENEMY_MOVE_COLLISION_GROUP},
@@ -182,6 +183,7 @@ impl AnimatedEntity for Enemy {
 
         match self.status {
             Status::Attack => frames[0],
+            Status::CastSpell => 0,
             Status::Idle => frames[1],
             Status::Move(_) => frames[2],
         }
