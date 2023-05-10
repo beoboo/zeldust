@@ -71,6 +71,7 @@ use crate::{
     weapon::{spawn_weapon, switch_weapon, Weapon},
     widgets::WidgetsPlugin,
 };
+use crate::debug::DEBUG_WORLD;
 
 mod camera;
 mod clamped;
@@ -159,7 +160,6 @@ fn main() {
         }),
         ..default()
     }))
-        .add_plugin(WorldInspectorPlugin::default())
         // .add_plugin(TilesetPlugin::default())
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
         .add_plugin(ShapePlugin)
@@ -241,6 +241,10 @@ fn main() {
                          animate_particles,
                      ).in_set(OnUpdate(AppState::Playing)),
         );
+
+    if DEBUG_WORLD {
+        app.add_plugin(WorldInspectorPlugin::default());
+    }
 
     if DEBUG_PHYSICS {
         app.add_plugin(RapierDebugRenderPlugin::default());

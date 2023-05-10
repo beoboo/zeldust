@@ -83,7 +83,7 @@ impl Player {
 
     pub fn cast_spell(&mut self, cost: u32) -> bool {
         if self.energy.value() >= cost {
-            // self.energy -= cost;
+            self.energy -= cost;
             true
         } else {
             false
