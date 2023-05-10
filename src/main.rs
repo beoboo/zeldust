@@ -1,34 +1,35 @@
+use bevy::prelude::*;
+use bevy::window::{PrimaryWindow, WindowResolution};
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_prototype_lyon::prelude::*;
+
+use crate::map::WorldMap;
+use crate::player::{animate_player, handle_input, move_camera, Player, PlayerPositionEvent, spawn_player};
+use crate::settings::{CAMERA_SCALE, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE};
+use crate::ui::show_ui;
+
 mod settings;
 mod player;
 mod map;
 mod layer;
 mod ui;
 
-use bevy::core::FixedTimestep;
-use bevy::prelude::*;
-use bevy_tileset::prelude::{Tileset, TilesetPlugin, Tilesets};
-use crate::map::WorldMap;
-use crate::player::{animate_player, move_camera, move_player, PlayerPositionEvent, spawn_player};
-
-use crate::settings::{FPS, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE};
-use crate::ui::show_ui;
-
-
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, Hash, States)]
 enum AppState {
+    #[default]
     Load,
     SpawnMap,
     Playing,
 }
 
-#[derive(Component, Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Component, Reflect)]
 pub struct Position {
     x: f32,
     y: f32,
     layer: u32,
 }
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct Size {
     width: f32,
     height: f32,
@@ -40,67 +41,58 @@ impl Default for Size {
     }
 }
 
+#[derive(Resource)]
 pub struct MapBackground {
     handle: Handle<Image>,
 }
 
-#[derive(Component)]
-pub struct Map;
-
-#[derive(Component)]
-pub struct MapBorder;
-
-#[derive(Component)]
+#[derive(Resource)]
 pub struct MapSize {
     width: u32,
     height: u32,
 }
 
+#[derive(Component, Reflect)]
+pub struct Map;
+
+#[derive(Component)]
+pub struct MapBorder;
+
+#[derive(Resource)]
 pub struct GameAssets {
-    player: Handle<Tileset>,
+    player: Handle<TextureAtlas>,
 }
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
-        .add_plugin(TilesetPlugin::default())
-        .insert_resource(WindowDescriptor {
-            title: "Zeldust".to_string(),
-            width: SCREEN_WIDTH as f32,
-            height: SCREEN_HEIGHT as f32,
-            ..Default::default()
-        })
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                title: "Zeldust".to_string(),
+                resolution: WindowResolution::new(SCREEN_WIDTH as f32, SCREEN_HEIGHT as f32),
+                ..default()
+            }),
+            ..default()
+        }))
+        .add_plugin(WorldInspectorPlugin::default())
+        // .add_plugin(TilesetPlugin::default())
+        .add_plugin(ShapePlugin)
+        .register_type::<Position>()
+        .register_type::<Player>()
         .insert_resource(ClearColor(Color::rgb(0.04, 0.04, 0.04)))
         .insert_resource(
             WorldMap::new()
                 .load_layer("assets/map/map_FloorBlocks.csv")
         )
-        .add_state(AppState::Load)
-        .add_system_set(
-            SystemSet::on_enter(AppState::Load)
-                .with_system(load_background)
-                .with_system(load_assets)
-        )
-        .add_system_set(
-            SystemSet::on_update(AppState::Load)
-                .with_system(setup_bounds)
-        )
-        .add_system_set(
-            SystemSet::on_update(AppState::SpawnMap)
-                .with_system(spawn_map)
-        )
-        .add_system_set(
-            SystemSet::on_update(AppState::Playing)
-                // .with_run_criteria(FixedTimestep::step(1.0 / FPS as f64))
-                .with_system(move_player)
-                .with_system(move_camera)
-                .with_system(animate_player)
-                .with_system(show_ui)
-        )
-        .add_system_to_stage(
-            CoreStage::PostUpdate,
-            position_tiles,
-        )
+        .add_state::<AppState>()
+        .add_system(load_background.in_schedule(OnEnter(AppState::Load)))
+        .add_system(load_assets.in_schedule(OnEnter(AppState::Load)))
+        .add_system(setup_bounds.in_set(OnUpdate(AppState::Load)))
+        .add_system(spawn_map.in_set(OnUpdate(AppState::SpawnMap)))
+        .add_system(show_ui.in_set(OnUpdate(AppState::SpawnMap)))
+        .add_system(handle_input.in_set(OnUpdate(AppState::Playing)))
+        .add_system(move_camera.in_set(OnUpdate(AppState::Playing)))
+        .add_system(animate_player.in_set(OnUpdate(AppState::Playing)))
+        .add_system(position_tiles.in_base_set(CoreSet::PostUpdate))
         .add_event::<PlayerPositionEvent>()
         .run();
 }
@@ -112,7 +104,7 @@ fn load_background(
     // println!("load background");
     let image = asset_server.load("map/ground.png");
 
-    commands.spawn_bundle(SpriteBundle {
+    commands.spawn(SpriteBundle {
         texture: image.clone(),
         ..Default::default()
     })
@@ -125,9 +117,14 @@ fn load_background(
 fn load_assets(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
+    let texture_handle = asset_server.load("player/player.png");
+    let texture_atlas =
+        TextureAtlas::from_grid(texture_handle, Vec2::new(64.0, 64.0), 24, 1, None, None);
+
     let assets = GameAssets {
-        player: asset_server.load("tilesets/player.ron")
+        player: texture_atlases.add(texture_atlas)
     };
 
     commands.insert_resource(assets);
@@ -135,7 +132,7 @@ fn load_assets(
 
 fn setup_bounds(
     mut commands: Commands,
-    mut app_state: ResMut<State<AppState>>,
+    mut app_state: ResMut<NextState<AppState>>,
     mut ev_asset: EventReader<AssetEvent<Image>>,
     mut map_query: Query<&mut Position, With<Map>>,
     assets: Res<Assets<Image>>,
@@ -146,7 +143,7 @@ fn setup_bounds(
         match ev {
             AssetEvent::Created { handle } => {
                 if *handle == bg.handle {
-                    let img = assets.get(bg.handle.clone()).unwrap();
+                    let img = assets.get(&bg.handle).unwrap();
 
                     let size = MapSize {
                         width: img.texture_descriptor.size.width,
@@ -159,7 +156,7 @@ fn setup_bounds(
                     map_pos.y = (size.height as f32) / 2.;
 
                     commands.insert_resource(size);
-                    app_state.set(AppState::SpawnMap).unwrap();
+                    app_state.set(AppState::SpawnMap);
                 }
             }
             _ => {}
@@ -169,35 +166,36 @@ fn setup_bounds(
 
 fn spawn_map(
     mut commands: Commands,
-    mut app_state: ResMut<State<AppState>>,
+    mut app_state: ResMut<NextState<AppState>>,
     map_size: Res<MapSize>,
-    world_map: Res<WorldMap>,
-    asset_server: Res<AssetServer>,
-    tilesets: Tilesets,
     assets: Res<GameAssets>,
 ) {
     spawn_cameras(&mut commands, &map_size);
-    spawn_tiles(&mut commands, world_map, asset_server);
-    spawn_player(&mut commands, tilesets, assets, &map_size);
+    spawn_player(&mut commands, assets, &map_size);
 
-    app_state.set(AppState::Playing).unwrap();
+    app_state.set(AppState::Playing);
 }
 
 fn spawn_cameras(
     commands: &mut Commands,
     map_size: &Res<MapSize>,
 ) {
-    println!("spawn cameras");
+    // println!("spawn cameras");
 
     let (x, y) = (map_size.width as f32 / 2., map_size.height as f32 / 2.);
 
-    let mut camera = OrthographicCameraBundle::new_2d();
-    // camera.orthographic_projection.scale = 5.;
+    let mut camera = Camera2dBundle {
+        projection: OrthographicProjection {
+            scale: CAMERA_SCALE,
+            ..default()
+        },
+        ..default()
+    };
 
-    commands.spawn_bundle(camera)
+    commands.spawn(camera)
         .insert(Position { x, y, layer: 999 })
     ;
-    commands.spawn_bundle(UiCameraBundle::default());
+    // commands.spawn(UiCameraBundle::default());
 }
 
 fn spawn_tiles(
@@ -205,7 +203,7 @@ fn spawn_tiles(
     world_map: Res<WorldMap>,
     asset_server: Res<AssetServer>,
 ) {
-    println!("spawn tiles");
+    // println!("spawn tiles");
 
     let tile_size = TILE_SIZE as f32;
     let half_tile_size = tile_size / 2.;
@@ -218,11 +216,11 @@ fn spawn_tiles(
 
             match cell {
                 // 'p' => {
-                //     commands.spawn_bundle(OrthographicCameraBundle::new_2d())
+                //     commands.spawn(OrthographicCameraBundle::new_2d())
                 //         .insert(Position { x, y })
                 //     ;
                 //
-                //     commands.spawn_bundle(SpriteBundle {
+                //     commands.spawn(SpriteBundle {
                 //         texture: asset_server.load("test/player.png"),
                 //         ..Default::default()
                 //     })
@@ -231,7 +229,7 @@ fn spawn_tiles(
                 //     ;
                 // }
                 395 => {
-                    commands.spawn_bundle(SpriteBundle {
+                    commands.spawn(SpriteBundle {
                         texture: asset_server.load("test/rock.png"),
                         ..Default::default()
                     })
@@ -252,20 +250,23 @@ fn spawn_tiles(
 }
 
 fn position_tiles(
-    windows: Res<Windows>,
-    mut q: Query<(&Position, &mut Transform)>,
+    window: Query<&Window, With<PrimaryWindow>>,
+    mut q: Query<(&Position, &mut Transform), Changed<Position>>,
 ) {
     fn convert(pos: f32, bound_dim: f32) -> f32 {
         pos - (bound_dim / 2.)
     }
 
-    let window = windows.get_primary().unwrap();
+    let Ok(window) = window.get_single() else { return; };
+
     for (pos, mut transform) in q.iter_mut() {
         transform.translation = Vec3::new(
             convert(pos.x, window.width() as f32),
             -convert(pos.y, window.height() as f32),
             pos.layer as f32,
         );
+
+        // dbg!(transform.translation);
     }
 }
 

@@ -1,5 +1,7 @@
+use bevy::prelude::*;
 use crate::layer::Layer;
 
+#[derive(Resource)]
 pub struct WorldMap {
     pub layers: Vec<Layer>,
 }

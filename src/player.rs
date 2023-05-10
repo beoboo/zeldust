@@ -1,11 +1,11 @@
 use std::time::Duration;
+use bevy::log;
 use bevy::prelude::*;
 use bevy::sprite::collide_aabb::{collide, Collision};
-use bevy_tileset::prelude::TileHandleType::Animated;
 use bevy_tileset::prelude::{TileIndex, Tilesets};
 use crate::{GameAssets, MapBorder, MapSize, Position, Size};
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct Player {
     speed: f32,
     status: Status,
@@ -22,13 +22,17 @@ impl Default for Player {
     }
 }
 
-#[derive(Debug)]
+#[derive(Component, Deref, DerefMut)]
+pub struct AnimationTimer(pub Timer);
+
+
+#[derive(Debug, PartialEq, Reflect)]
 pub enum Status {
     Idle,
     Moving,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Reflect)]
 pub enum Direction {
     Left,
     Up,
@@ -36,11 +40,11 @@ pub enum Direction {
     Down
 }
 
+#[derive(Debug)]
 pub struct PlayerPositionEvent(Position);
 
 pub fn spawn_player(
     commands: &mut Commands,
-    tilesets: Tilesets,
     assets: Res<GameAssets>,
     map_size: &Res<MapSize>,
 ) {
@@ -48,37 +52,27 @@ pub fn spawn_player(
 
     let (x, y) = (map_size.width as f32 / 2., map_size.height as f32 / 2.);
 
-    let player_assets = tilesets.get(&assets.player).unwrap();
-
-    let index = player_assets.get_tile_index("Player up idle").unwrap();
-    let index = match index {
-        TileIndex::Standard(index) => index,
-        TileIndex::Animated(start, _, _) => start,
-    };
-
-    commands.spawn_bundle(SpriteSheetBundle {
-        sprite: TextureAtlasSprite::new(index),
-        texture_atlas: player_assets.atlas().clone_weak(),
+    commands.spawn(SpriteSheetBundle {
+        sprite: TextureAtlasSprite::new(4),
+        texture_atlas: assets.player.clone(),
         ..Default::default()
     })
         .insert(Player::default())
         .insert(Position { x, y, layer: 1 })
         .insert(Size::default())
-        .insert(Timer::from_seconds(0.1, true))
+        .insert(AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)))
     ;
 }
 
-pub fn move_player(
+pub fn handle_input(
     keyboard_input: Res<Input<KeyCode>>,
-    mut players: Query<(&mut Player, &Transform, &Size, &mut Position), Without<MapBorder>>,
+    mut players: Query<(&mut Player, &Transform, &Size, &mut Position, &mut AnimationTimer), Without<MapBorder>>,
     borders: Query<(&MapBorder, &Transform, &Size, &Position), Without<Player>>,
     mut position_writer: EventWriter<PlayerPositionEvent>,
 ) {
-    // println!("move player");
-
     let mut vec = Vec2::default();
 
-    let (mut player, transform, size, mut position) = players.single_mut();
+    let (mut player, transform, size, mut position, mut animation_timer) = players.single_mut();
 
     for key in keyboard_input.get_pressed() {
         match key {
@@ -102,12 +96,15 @@ pub fn move_player(
         }
     }
 
-
-    if vec != Vec2::default() {
+    if vec != Vec2::ZERO {
         let vec = vec.normalize();
         position.x += player.speed * vec.x;
         position.y += player.speed * vec.y;
-        player.status = Status::Moving;
+
+        if player.status != Status::Moving {
+            player.status = Status::Moving;
+            animation_timer.pause();
+        }
 
         borders.iter().for_each(|(_, t, s, p)| {
             let v1 = Vec2::new(s.width, s.height);
@@ -119,6 +116,9 @@ pub fn move_player(
                     Collision::Right => position.x = p.x + s.width,
                     Collision::Top => position.y = p.y - s.height,
                     Collision::Bottom => position.y = p.y + s.height,
+                    Collision::Inside => {
+                        unimplemented!()
+                    }
                 }
             }
         });
@@ -143,53 +143,46 @@ pub fn move_camera(
 }
 
 pub fn animate_player(
-    tilesets: Tilesets,
-    assets: Res<GameAssets>,
     time: Res<Time>,
-    mut query: Query<(&Player, &mut Timer, &mut TextureAtlasSprite, &Handle<TextureAtlas>)>,
+    mut query: Query<(&Player, &mut AnimationTimer, &mut TextureAtlasSprite)>,
 ) {
-
-    let (player, mut timer, mut sprite, handle) = query.single_mut();
-    let assets = tilesets.get(&assets.player).unwrap();
+    let (player, mut timer, mut sprite) = query.single_mut();
 
     let index = match player.status {
         Status::Idle => {
             match player.direction {
-                Direction::Left => assets.get_tile_index("Player left idle").unwrap(),
-                Direction::Right => assets.get_tile_index("Player right idle").unwrap(),
-                Direction::Up => assets.get_tile_index("Player up idle").unwrap(),
-                Direction::Down => assets.get_tile_index("Player down idle").unwrap(),
+                Direction::Down => 4,
+                Direction::Left => 5,
+                Direction::Right => 6,
+                Direction::Up => 7,
             }
         }
         Status::Moving => {
             match player.direction {
-                Direction::Left => assets.get_tile_index("Player left moving").unwrap(),
-                Direction::Right => assets.get_tile_index("Player right moving").unwrap(),
-                Direction::Up => assets.get_tile_index("Player up moving").unwrap(),
-                Direction::Down => assets.get_tile_index("Player down moving").unwrap(),
-                _ => return
+                Direction::Down => 8,
+                Direction::Left => 12,
+                Direction::Right => 16,
+                Direction::Up => 20,
             }
         }
     };
 
-    match index {
-        TileIndex::Standard(index) => {
-            timer.pause();
-            sprite.index = index
-        },
-        TileIndex::Animated(start, end, speed) => {
-            if timer.paused() {
-                sprite.index = start;
-                timer.set_duration(Duration::from_secs_f32(speed));
-                timer.reset();
-                timer.unpause();
+    match player.status {
+        Status::Idle => sprite.index = index,
+        Status::Moving => {
+            if timer.0.paused() {
+                sprite.index = index;
+                log::info!("Unpausing to {}", index);
+                timer.0.set_duration(Duration::from_secs_f32(0.1));
+                timer.0.reset();
+                timer.0.unpause();
             } else {
-                timer.tick(time.delta());
-                if timer.finished() {
-                    sprite.index += 1;
-                    if sprite.index > end || sprite.index < start {
-                        sprite.index = start
-                    }
+                timer.0.tick(time.delta());
+                if timer.0.just_finished() {
+                    let mut current = sprite.index;
+                    current = (current + 1) % 4;
+                    sprite.index = index + current;
+                    log::info!("Moving to {}", sprite.index);
                 }
             }
         }
