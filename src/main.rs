@@ -131,7 +131,7 @@ fn main() {
         // .add_plugin(TilesetPlugin::default())
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
         .add_plugin(
-            RapierDebugRenderPlugin::default(), // .disabled()
+            RapierDebugRenderPlugin::default() .disabled()
         )
         .add_plugin(ShapePlugin)
         .add_plugin(JsonAssetPlugin::<TexturePack>::new(&["json"]))
@@ -381,10 +381,10 @@ fn spawn_tiles(
                         spawn_tile(&mut commands, &window, &assets, &atlases, layer_type, cell, x, y);
                     },
                     390..=393 => {
-                        num_enemies += 1;
-                        if num_enemies > max_enemies {
-                            continue;
-                        }
+                        // num_enemies += 1;
+                        // if num_enemies > max_enemies {
+                        //     continue;
+                        // }
                         spawn_enemy(
                             &mut commands,
                             &window,

@@ -5,7 +5,7 @@ use bevy_rapier2d::prelude::*;
 
 use crate::{
     constants::SPEED,
-    entities::{AnimationTimer, AttackTimer, Direction, Player, Status},
+    entities::{Animation, AttackTimer, Direction, Player, Status},
     events::{SwitchMagic, SwitchWeapon},
     weapon::Weapon,
     StaticCollider,
@@ -14,14 +14,14 @@ use crate::{
 pub fn handle_input(
     mut commands: Commands,
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<(Entity, &mut Player, &mut Velocity, &mut AnimationTimer), Without<StaticCollider>>,
+    mut query: Query<(Entity, &mut Player, &mut Velocity, &mut Animation), Without<StaticCollider>>,
     mut switch_weapon: EventWriter<SwitchWeapon>,
     mut switch_magic: EventWriter<SwitchMagic>,
     weapon: Res<Weapon>,
 ) {
     let mut vec = Vec2::default();
 
-    let (entity, mut player, mut velocity, mut animation_timer) = query.single_mut();
+    let (entity, mut player, mut velocity, mut animation) = query.single_mut();
 
     if player.is_attacking() {
         return;
@@ -82,7 +82,7 @@ pub fn handle_input(
 
     if player.status != status {
         player.status = status;
-        animation_timer.pause();
+        animation.stop();
 
         if player.is_moving() {
             velocity.linvel = vec * player.speed * SPEED;

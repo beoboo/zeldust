@@ -4,7 +4,7 @@ use parse_display::Display;
 
 use crate::{
     constants::{ANIMATION_DURATION, ATTACK_DURATION, SPEED, TILE_SIZE},
-    entities::{AnimationTimer, AttackTimer, Player, Status},
+    entities::{Animation, AttackTimer, Player, Status},
     frames::TexturePack,
     from_position,
     GameAssetType,
@@ -66,6 +66,10 @@ impl Enemy {
             can_attack: true,
             frame: 0,
         }
+    }
+
+    pub fn asset_name(&self) -> String {
+        format!("monsters/{}/{}/0.png", self.ty, self.status)
     }
 
     pub fn is_attacking(&self) -> bool {
@@ -179,9 +183,6 @@ pub fn spawn_enemy(
 
     // let collider_height = TILE_SIZE / 2.0;
 
-    let mut timer = AnimationTimer(Timer::new(ANIMATION_DURATION, TimerMode::Repeating));
-    timer.0.pause();
-
     commands
         .spawn((
             SpriteSheetBundle {
@@ -195,7 +196,7 @@ pub fn spawn_enemy(
             LockedAxes::ROTATION_LOCKED,
             ActiveEvents::COLLISION_EVENTS,
             Velocity::zero(),
-            timer,
+            Animation::new(ANIMATION_DURATION),
             Enemy::new(ty),
         ))
         .with_children(|parent| {
@@ -210,11 +211,11 @@ pub fn spawn_enemy(
 pub fn move_enemy(
     mut commands: Commands,
     player_q: Query<&Transform, With<Player>>,
-    mut enemy_q: Query<(Entity, &mut Enemy, &Transform, &mut Velocity, &mut AnimationTimer)>,
+    mut enemy_q: Query<(Entity, &mut Enemy, &Transform, &mut Velocity, &mut Animation)>,
 ) {
     let player_transform = player_q.single();
 
-    for (entity, mut enemy, transform, mut velocity, mut timer) in enemy_q.iter_mut() {
+    for (entity, mut enemy, transform, mut velocity, mut animation) in enemy_q.iter_mut() {
         let diff = player_transform.translation - transform.translation;
         let distance = diff.length();
         let direction = diff.xy().normalize_or_zero() * enemy.speed() * SPEED;
@@ -241,7 +242,7 @@ pub fn move_enemy(
         }
 
         if status != enemy.status {
-            timer.pause();
+            animation.stop();
 
             enemy.status = status;
         }
@@ -250,32 +251,21 @@ pub fn move_enemy(
 
 pub fn render_enemy(
     time: Res<Time>,
-    mut query: Query<(&mut Enemy, &mut AnimationTimer, &mut TextureAtlasSprite)>,
+    mut query: Query<(&mut Enemy, &mut Animation, &mut TextureAtlasSprite)>,
     asset_server: Res<AssetServer>,
     textures: Res<Assets<TexturePack>>,
 ) {
-    for (mut enemy, mut timer, mut sprite) in query.iter_mut() {
-        let mut status = enemy.status.to_string();
-
-        let name = format!("monsters/{}/{status}/0.png", enemy.ty);
-        // log::info!("{name}");
+    for (mut enemy, mut animation, mut sprite) in query.iter_mut() {
         let handle = asset_server.load("textures/monsters.json");
         let pack = textures.get(&handle).expect("Texture pack must exist");
-        let mut index = pack.index_of(&name);
+        let mut index = pack.index_of(&enemy.asset_name());
 
-        if timer.0.paused() {
-            // log::info!("Unpausing enemy {enemy:?}");
-            timer.0.reset();
-            timer.0.unpause();
+        if animation.is_paused() {
+            animation.play(enemy.num_frames());
             sprite.index = index;
-            enemy.frame = 0;
         } else {
-            timer.0.tick(time.delta());
-
-            if timer.0.just_finished() {
-                enemy.frame = (enemy.frame + 1) % enemy.num_frames();
-                sprite.index = index + enemy.frame;
-            }
+            let frame = animation.next_frame(time.delta());
+            sprite.index = index + frame;
         }
     }
 }

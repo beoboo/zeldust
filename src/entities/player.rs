@@ -3,7 +3,7 @@ use bevy_rapier2d::prelude::*;
 
 use crate::{
     constants::{ANIMATION_DURATION, TILE_SIZE},
-    entities::{AnimationTimer, AttackTimer, Direction, Status},
+    entities::{Animation, AttackTimer, Direction, Status},
     frames::TexturePack,
     from_position,
     weapon::PlayerWeapon,
@@ -31,6 +31,12 @@ impl Default for Player {
 }
 
 impl Player {
+    pub fn asset_name(&self) -> String {
+        let postfix = if self.is_moving() { "_0" } else { "" };
+
+        format!("player/{}/{}{postfix}.png", self.status, self.direction)
+    }
+
     pub fn is_moving(&self) -> bool {
         matches!(self.status, Status::Move(_))
     }
@@ -113,7 +119,7 @@ pub fn spawn_player(commands: &mut Commands, window: &Window, assets: &Res<GameA
             ActiveEvents::COLLISION_EVENTS,
             Velocity::zero(),
             Stats::default(),
-            AnimationTimer(Timer::new(ANIMATION_DURATION, TimerMode::Repeating)),
+            Animation::new(ANIMATION_DURATION),
         ))
         .with_children(|parent| {
             parent.spawn((
@@ -135,33 +141,22 @@ pub fn move_camera(
 
 pub fn render_player(
     time: Res<Time>,
-    mut query: Query<(&mut Player, &mut AnimationTimer, &mut TextureAtlasSprite)>,
+    mut query: Query<(&mut Player, &mut Animation, &mut TextureAtlasSprite)>,
     asset_server: Res<AssetServer>,
     textures: Res<Assets<TexturePack>>,
 ) {
-    let (mut player, mut timer, mut sprite) = query.single_mut();
+    let (mut player, mut animation, mut sprite) = query.single_mut();
 
-    let direction = player.direction;
-    let mut status = player.status.to_string();
-
-    let postfix = if player.is_moving() { "_0" } else { "" };
-
-    let name = format!("player/{status}/{direction}{postfix}.png");
     let handle = asset_server.load("textures/player.json");
     let pack = textures.get(&handle).expect("Texture pack must exist");
-    let index = pack.index_of(&name);
+    let index = pack.index_of(&player.asset_name());
 
-    if timer.0.paused() {
+    if animation.is_paused() {
+        animation.play(player.num_frames());
         sprite.index = index;
-        player.frame = 0;
-        timer.0.reset();
-        timer.0.unpause();
     } else {
-        timer.0.tick(time.delta());
-        if timer.0.just_finished() {
-            player.frame = (player.frame + 1) % player.num_frames();
-            sprite.index = index + player.frame;
-        }
+        let frame = animation.next_frame(time.delta());
+        sprite.index = index + frame;
     }
 }
 
