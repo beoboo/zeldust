@@ -1,16 +1,15 @@
-use bevy::log;
-use std::time::Duration;
-
-use bevy::math::Vec3Swizzles;
-use bevy::prelude::*;
+use bevy::{log, math::Vec3Swizzles, prelude::*};
 use bevy_rapier2d::prelude::*;
 use parse_display::Display;
 
-use crate::constants::{ANIMATION_DURATION, FPS, TILE_SIZE};
-use crate::entities::Status;
-use crate::entities::{AnimationTimer, Player};
-use crate::frames::TexturePack;
-use crate::{from_position, GameAssetType, GameAssets};
+use crate::{
+    constants::{ANIMATION_DURATION, ATTACK_DURATION, SPEED, TILE_SIZE},
+    entities::{AnimationTimer, AttackTimer, Player, Status},
+    frames::TexturePack,
+    from_position,
+    GameAssetType,
+    GameAssets,
+};
 
 pub enum AttackType {
     Slash,
@@ -55,7 +54,7 @@ impl From<i32> for EnemyType {
 pub struct Enemy {
     ty: EnemyType,
     status: Status,
-    is_attacking: bool,
+    can_attack: bool,
     frame: usize,
 }
 
@@ -64,8 +63,27 @@ impl Enemy {
         Self {
             ty,
             status: Status::Idle,
-            is_attacking: false,
+            can_attack: true,
             frame: 0,
+        }
+    }
+
+    pub fn is_attacking(&self) -> bool {
+        self.status == Status::Attack
+    }
+
+    pub fn num_frames(&self) -> usize {
+        let frames = match self.ty {
+            EnemyType::Bamboo => [1, 4, 4],
+            EnemyType::Raccoon => [4, 6, 5],
+            EnemyType::Spirit => [1, 4, 4],
+            EnemyType::Squid => [1, 4, 4],
+        };
+
+        match self.status {
+            Status::Attack => frames[0],
+            Status::Idle => frames[1],
+            Status::Move(_) => frames[2],
         }
     }
 
@@ -159,7 +177,7 @@ pub fn spawn_enemy(
 
     let y = y - offset;
 
-    let collider_height = TILE_SIZE / 2.0;
+    // let collider_height = TILE_SIZE / 2.0;
 
     let mut timer = AnimationTimer(Timer::new(ANIMATION_DURATION, TimerMode::Repeating));
     timer.0.pause();
@@ -182,37 +200,50 @@ pub fn spawn_enemy(
         ))
         .with_children(|parent| {
             parent.spawn((
-                Collider::cuboid(rect.width() / 2.0, collider_height / 2.0),
-                Transform::from_xyz(0.0, -offset, 0.0),
-                ColliderDebugColor(Color::RED),
+                // Collider::cuboid(rect.width() / 2.0, collider_height / 2.0),
+                // Transform::from_xyz(0.0, -offset, 0.0),
+                // ColliderDebugColor(Color::RED),
             ));
         });
 }
 
 pub fn move_enemy(
+    mut commands: Commands,
     player_q: Query<&Transform, With<Player>>,
-    mut enemy_q: Query<(&Transform, &mut Velocity, &mut Enemy)>,
+    mut enemy_q: Query<(Entity, &mut Enemy, &Transform, &mut Velocity, &mut AnimationTimer)>,
 ) {
     let player_transform = player_q.single();
 
-    for (transform, mut velocity, mut enemy) in enemy_q.iter_mut() {
+    for (entity, mut enemy, transform, mut velocity, mut timer) in enemy_q.iter_mut() {
         let diff = player_transform.translation - transform.translation;
         let distance = diff.length();
-        let direction = diff.xy().normalize_or_zero() * enemy.speed() * FPS;
+        let direction = diff.xy().normalize_or_zero() * enemy.speed() * SPEED;
 
-        // println!("{distance}");
+        if enemy.is_attacking() {
+            continue;
+        }
 
-        if distance < enemy.attack_radius() {
-            velocity.linvel = direction.into();
-            enemy.is_attacking = true;
+        let mut status = Status::Idle;
+
+        if distance < enemy.attack_radius() && enemy.can_attack {
+            velocity.linvel = Vec2::ZERO;
+            enemy.can_attack = false;
+            status = Status::Attack;
+
+            commands
+                .entity(entity)
+                .insert(AttackTimer(Timer::new(ATTACK_DURATION, TimerMode::Once)));
         } else if distance < enemy.notice_radius() {
             velocity.linvel = direction.into();
-            enemy.is_attacking = false;
-            enemy.status = Status::Move;
+            status = Status::Move(direction);
         } else {
             velocity.linvel = Vec2::ZERO;
-            enemy.is_attacking = false;
-            enemy.status = Status::Idle;
+        }
+
+        if status != enemy.status {
+            timer.pause();
+
+            enemy.status = status;
         }
     }
 }
@@ -224,31 +255,43 @@ pub fn render_enemy(
     textures: Res<Assets<TexturePack>>,
 ) {
     for (mut enemy, mut timer, mut sprite) in query.iter_mut() {
-        let status = enemy.status.to_string();
+        let mut status = enemy.status.to_string();
 
         let name = format!("monsters/{}/{status}/0.png", enemy.ty);
+        // log::info!("{name}");
         let handle = asset_server.load("textures/monsters.json");
         let pack = textures.get(&handle).expect("Texture pack must exist");
         let mut index = pack.index_of(&name);
 
-        if !enemy.is_attacking {
-            if timer.0.paused() {
-                log::info!("Unpausing enemy {enemy:?}");
-                timer.0.reset();
-                timer.0.unpause();
-                sprite.index = index;
-                enemy.frame = 0;
-            } else {
-                timer.0.tick(time.delta());
-
-                if timer.0.just_finished() {
-                    enemy.frame = (enemy.frame + 1) % 4;
-                    sprite.index = index + enemy.frame;
-                }
-            }
-        } else {
-            timer.pause();
+        if timer.0.paused() {
+            // log::info!("Unpausing enemy {enemy:?}");
+            timer.0.reset();
+            timer.0.unpause();
             sprite.index = index;
+            enemy.frame = 0;
+        } else {
+            timer.0.tick(time.delta());
+
+            if timer.0.just_finished() {
+                enemy.frame = (enemy.frame + 1) % enemy.num_frames();
+                sprite.index = index + enemy.frame;
+            }
+        }
+    }
+}
+
+pub fn end_enemy_attack(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut entity_q: Query<(Entity, &mut Enemy, &mut AttackTimer)>,
+) {
+    for (entity, mut enemy, mut timer) in entity_q.iter_mut() {
+        timer.0.tick(time.delta());
+
+        if timer.0.finished() {
+            enemy.status = Status::Idle;
+            enemy.can_attack = true;
+            commands.entity(entity).remove::<AttackTimer>();
         }
     }
 }

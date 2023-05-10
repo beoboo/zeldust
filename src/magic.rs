@@ -1,10 +1,7 @@
 use bevy::prelude::*;
 use parse_display::Display;
 
-use crate::entities::Player;
-use crate::events::SwitchMagic;
-use crate::frames::TexturePack;
-use crate::GameAssets;
+use crate::{entities::Player, events::SwitchMagic, frames::TexturePack, GameAssets};
 
 #[derive(Component)]
 pub struct PlayerMagic;
@@ -64,7 +61,7 @@ pub fn spawn_magic(
 
     let (entity, player) = player_q.single();
 
-    if !player.is_attacking {
+    if !player.is_attacking() {
         return;
     }
 

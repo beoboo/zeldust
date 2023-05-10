@@ -1,12 +1,14 @@
 use bevy::prelude::*;
 use parse_display::Display;
 
-use crate::constants::TILE_SIZE;
-use crate::entities::Direction;
-use crate::entities::Player;
-use crate::events::SwitchWeapon;
-use crate::frames::TexturePack;
-use crate::{GameAssetType, GameAssets};
+use crate::{
+    constants::TILE_SIZE,
+    entities::{Direction, Player},
+    events::SwitchWeapon,
+    frames::TexturePack,
+    GameAssetType,
+    GameAssets,
+};
 
 #[derive(Component)]
 pub struct PlayerWeapon;
@@ -78,7 +80,7 @@ pub fn spawn_weapon(
 
     let (entity, player) = player_q.single();
 
-    if !player.is_attacking {
+    if !player.is_attacking() {
         return;
     }
 

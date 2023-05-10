@@ -10,11 +10,19 @@ pub use player::*;
 mod enemies;
 mod player;
 
+#[derive(Component, Deref, DerefMut)]
+pub struct AttackTimer(pub Timer);
+
+#[derive(Component, Deref, DerefMut)]
+pub struct AnimationTimer(pub Timer);
+
 #[derive(Debug, Clone, Copy, Display, PartialEq, Reflect)]
 #[display(style = "snake_case")]
 pub enum Status {
     Idle,
-    Move,
+    Attack,
+    #[display("move")]
+    Move(Vec2),
 }
 
 #[derive(Debug, Clone, Copy, Display, PartialEq, Reflect)]

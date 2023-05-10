@@ -1,9 +1,8 @@
-use bevy::prelude::*;
-use bevy::render::Extract;
-use bevy::ui::ExtractedUiNode;
-use bevy::ui::ExtractedUiNodes;
-use bevy::ui::FocusPolicy;
-use bevy::ui::UiStack;
+use bevy::{
+    prelude::*,
+    render::Extract,
+    ui::{ExtractedUiNode, ExtractedUiNodes, FocusPolicy, UiStack},
+};
 
 /// A component that represents an image from a `TextureAtlas`.
 #[derive(Component, Clone, Debug, Default, Reflect)]
@@ -115,14 +114,8 @@ pub fn extract_texture_atlas_image_uinodes(
     >,
 ) {
     for (stack_index, entity) in ui_stack.uinodes.iter().enumerate() {
-        if let Ok((uinode, global_transform, color, atlas_image, visibility, clip)) =
-            uinode_query.get(*entity)
-        {
-            if !visibility.is_visible()
-                || uinode.size().x == 0.
-                || uinode.size().y == 0.
-                || color.0.a() == 0.0
-            {
+        if let Ok((uinode, global_transform, color, atlas_image, visibility, clip)) = uinode_query.get(*entity) {
+            if !visibility.is_visible() || uinode.size().x == 0. || uinode.size().y == 0. || color.0.a() == 0.0 {
                 continue;
             }
 

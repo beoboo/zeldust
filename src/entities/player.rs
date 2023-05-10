@@ -1,28 +1,51 @@
-use std::time::Duration;
-
-use bevy::prelude::*;
-use bevy::utils::HashMap;
+use bevy::{prelude::*, utils::HashMap};
 use bevy_rapier2d::prelude::*;
 
-use crate::constants::{ANIMATION_DURATION, TILE_SIZE};
-use crate::entities::{Direction, Status};
-use crate::frames::TexturePack;
-use crate::weapon::PlayerWeapon;
-use crate::{from_position, GameAssetType, GameAssets};
-
-#[derive(Component, Deref)]
-pub struct AttackTimer(pub Timer);
-
-#[derive(Component, Deref, DerefMut)]
-pub struct AnimationTimer(pub Timer);
+use crate::{
+    constants::{ANIMATION_DURATION, TILE_SIZE},
+    entities::{AnimationTimer, AttackTimer, Direction, Status},
+    frames::TexturePack,
+    from_position,
+    weapon::PlayerWeapon,
+    GameAssetType,
+    GameAssets,
+};
 
 #[derive(Component, Reflect)]
 pub struct Player {
     pub speed: f32,
     pub status: Status,
     pub direction: Direction,
-    pub is_attacking: bool,
     pub frame: usize,
+}
+
+impl Default for Player {
+    fn default() -> Self {
+        Self {
+            speed: 5.0,
+            status: Status::Idle,
+            direction: Direction::Down,
+            frame: 0,
+        }
+    }
+}
+
+impl Player {
+    pub fn is_moving(&self) -> bool {
+        matches!(self.status, Status::Move(_))
+    }
+
+    pub fn is_attacking(&self) -> bool {
+        self.status == Status::Attack
+    }
+
+    pub fn num_frames(&self) -> usize {
+        match self.status {
+            Status::Attack => 1,
+            Status::Idle => 1,
+            Status::Move(_) => 4,
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -41,10 +64,7 @@ pub struct Stat {
 
 impl Stat {
     pub fn new(max: u32) -> Self {
-        Self {
-            value: max / 2,
-            max,
-        }
+        Self { value: max / 2, max }
     }
 
     pub fn ratio(&self) -> f32 {
@@ -77,25 +97,7 @@ impl Stats {
     }
 }
 
-impl Default for Player {
-    fn default() -> Self {
-        Self {
-            speed: 5.0,
-            status: Status::Idle,
-            direction: Direction::Down,
-            is_attacking: false,
-            frame: 0,
-        }
-    }
-}
-
-pub fn spawn_player(
-    commands: &mut Commands,
-    window: &Window,
-    assets: &Res<GameAssets>,
-    x: f32,
-    y: f32,
-) {
+pub fn spawn_player(commands: &mut Commands, window: &Window, assets: &Res<GameAssets>, x: f32, y: f32) {
     commands
         .spawn((
             SpriteSheetBundle {
@@ -142,50 +144,38 @@ pub fn render_player(
     let direction = player.direction;
     let mut status = player.status.to_string();
 
-    if player.is_attacking {
-        status = String::from("attack");
-    }
-
-    let postfix = if player.status == Status::Move {
-        "_0"
-    } else {
-        ""
-    };
+    let postfix = if player.is_moving() { "_0" } else { "" };
 
     let name = format!("player/{status}/{direction}{postfix}.png");
     let handle = asset_server.load("textures/player.json");
     let pack = textures.get(&handle).expect("Texture pack must exist");
     let index = pack.index_of(&name);
 
-    if !player.is_attacking && player.status == Status::Move {
-        if timer.0.paused() {
-            sprite.index = index;
-            player.frame = 0;
-            timer.0.reset();
-            timer.0.unpause();
-        } else {
-            timer.0.tick(time.delta());
-            if timer.0.just_finished() {
-                player.frame = (player.frame + 1) % 4;
-                sprite.index = index + player.frame;
-            }
-        }
-    } else {
+    if timer.0.paused() {
         sprite.index = index;
+        player.frame = 0;
+        timer.0.reset();
+        timer.0.unpause();
+    } else {
+        timer.0.tick(time.delta());
+        if timer.0.just_finished() {
+            player.frame = (player.frame + 1) % player.num_frames();
+            sprite.index = index + player.frame;
+        }
     }
 }
 
-pub fn end_attack(
+pub fn end_player_attack(
     mut commands: Commands,
     time: Res<Time>,
     mut player_q: Query<(Entity, &mut Player, &mut AttackTimer)>,
     weapon_q: Query<Entity, With<PlayerWeapon>>,
 ) {
-    for (entity, mut player, mut timer) in player_q.iter_mut() {
+    if let Ok((entity, mut player, mut timer)) = player_q.get_single_mut() {
         timer.0.tick(time.delta());
 
         if timer.0.finished() {
-            player.is_attacking = false;
+            player.status = Status::Idle;
             commands.entity(entity).remove::<AttackTimer>();
 
             if let Ok(weapon) = weapon_q.get_single() {

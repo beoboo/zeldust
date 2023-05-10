@@ -1,13 +1,12 @@
-use bevy::prelude::*;
-use bevy::render::RenderApp;
-use bevy::ui::RenderUiSystem;
-use bevy::ui::UiSystem;
+use bevy::{
+    prelude::*,
+    render::RenderApp,
+    ui::{RenderUiSystem, UiSystem},
+};
 
 pub use ui_atlas_image::*;
 
-use crate::widgets::ui_atlas_image::{
-    extract_texture_atlas_image_uinodes, texture_atlas_image_node_system,
-};
+use crate::widgets::ui_atlas_image::{extract_texture_atlas_image_uinodes, texture_atlas_image_node_system};
 
 mod ui_atlas_image;
 

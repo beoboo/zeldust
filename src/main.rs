@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 
-use bevy::asset::LoadState;
-use bevy::prelude::*;
-use bevy::window::{PrimaryWindow, WindowResolution};
+use bevy::{
+    asset::LoadState,
+    prelude::*,
+    window::{PrimaryWindow, WindowResolution},
+};
 use bevy_common_assets::json::JsonAssetPlugin;
 use bevy_inspector_egui::quick::{ResourceInspectorPlugin, WorldInspectorPlugin};
 use bevy_prototype_lyon::prelude::*;
@@ -10,20 +12,38 @@ use bevy_rapier2d::prelude::*;
 use enum_iterator::{all, Sequence};
 use parse_display::Display;
 
-use crate::constants::{CAMERA_SCALE, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE};
-use crate::entities::{end_attack, move_camera, render_player, spawn_player, update_depth, Player};
-use crate::entities::{move_enemy, render_enemy, spawn_enemy, Enemy};
-use crate::events::{SwitchMagic, SwitchWeapon};
-use crate::frames::TexturePack;
-use crate::input::handle_input;
-use crate::magic::{spawn_magic, switch_magic, Magic};
-use crate::map::{LayerType, WorldMap};
-use crate::ui::{
-    change_magic_item, change_weapon_item, end_switch_magic, end_switch_weapon, spawn_ui,
-    MagicItemBox, WeaponItemBox,
+use crate::{
+    constants::{CAMERA_SCALE, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE},
+    entities::{
+        end_enemy_attack,
+        end_player_attack,
+        move_camera,
+        move_enemy,
+        render_enemy,
+        render_player,
+        spawn_enemy,
+        spawn_player,
+        update_depth,
+        Enemy,
+        Player,
+    },
+    events::{SwitchMagic, SwitchWeapon},
+    frames::TexturePack,
+    input::handle_input,
+    magic::{spawn_magic, switch_magic, Magic},
+    map::{LayerType, WorldMap},
+    ui::{
+        change_magic_item,
+        change_weapon_item,
+        end_switch_magic,
+        end_switch_weapon,
+        spawn_ui,
+        MagicItemBox,
+        WeaponItemBox,
+    },
+    weapon::{spawn_weapon, switch_weapon, Weapon},
+    widgets::WidgetsPlugin,
 };
-use crate::weapon::{spawn_weapon, switch_weapon, Weapon};
-use crate::widgets::WidgetsPlugin;
 
 mod collisions;
 mod constants;
@@ -149,18 +169,24 @@ fn main() {
         )
         .add_systems(
             (
-                handle_input,
                 move_camera,
+                switch_weapon,
+                switch_magic,
+                change_magic_item,
+                change_weapon_item,
+                end_switch_magic,
+                end_switch_weapon,
+            )
+                .in_set(OnUpdate(AppState::Playing)),
+        )
+        .add_systems(
+            (
+                handle_input,
                 render_player,
                 spawn_weapon,
-                switch_weapon,
                 spawn_magic,
-                switch_magic,
-                end_attack,
-                change_magic_item,
-                end_switch_magic,
-                change_weapon_item,
-                end_switch_weapon,
+                end_player_attack,
+                end_enemy_attack,
                 move_enemy,
                 render_enemy,
                 update_depth,
@@ -177,10 +203,10 @@ fn load_ground(asset_server: Res<AssetServer>, mut assets: ResMut<LoadingAssets>
     match asset_server.get_load_state(handle.clone()) {
         LoadState::Loaded => {
             assets.handles.insert(handle, true);
-        }
+        },
         _ => {
             assets.handles.insert(handle, false);
-        }
+        },
     }
 }
 
@@ -193,10 +219,10 @@ fn load_assets(asset_server: Res<AssetServer>, mut assets: ResMut<LoadingAssets>
             match asset_server.get_load_state(handle.clone()) {
                 LoadState::Loaded => {
                     assets.handles.insert(handle, true);
-                }
+                },
                 _ => {
                     assets.handles.insert(handle, false);
-                }
+                },
             }
         }
     }
@@ -238,13 +264,7 @@ fn prepare_assets(
         .map(|ty| {
             (
                 ty,
-                build_texture_atlas(
-                    ty,
-                    &asset_server,
-                    &mut images,
-                    &mut texture_atlases,
-                    &tiles_data,
-                ),
+                build_texture_atlas(ty, &asset_server, &mut images, &mut texture_atlases, &tiles_data),
             )
         })
         .collect::<HashMap<_, _>>();
@@ -346,8 +366,8 @@ fn spawn_tiles(
     textures: Res<Assets<TexturePack>>,
 ) {
     let window = window.single();
-    // let max_enemies = 1;
-    // let mut num_enemies = 0;
+    let max_enemies = 1;
+    let mut num_enemies = 0;
 
     // Spawn the world
     for (layer_type, layer) in world_map.layers.iter() {
@@ -358,22 +378,13 @@ fn spawn_tiles(
 
                 match cell {
                     0..=20 => {
-                        spawn_tile(
-                            &mut commands,
-                            &window,
-                            &assets,
-                            &atlases,
-                            layer_type,
-                            cell,
-                            x,
-                            y,
-                        );
-                    }
+                        spawn_tile(&mut commands, &window, &assets, &atlases, layer_type, cell, x, y);
+                    },
                     390..=393 => {
-                        // num_enemies += 1;
-                        // if num_enemies > max_enemies {
-                        //     continue;
-                        // }
+                        num_enemies += 1;
+                        if num_enemies > max_enemies {
+                            continue;
+                        }
                         spawn_enemy(
                             &mut commands,
                             &window,
@@ -385,18 +396,18 @@ fn spawn_tiles(
                             x,
                             y,
                         );
-                    }
+                    },
                     394 => {
                         spawn_player(&mut commands, &window, &assets, x, y);
-                    }
+                    },
                     395 => {
                         spawn_block(&mut commands, &window, &asset_server, layer_type, x, y);
-                    }
+                    },
                     _ => {
                         if cell != -1 {
                             info!("Not mapped yet: {}", cell);
                         }
-                    }
+                    },
                 }
             }
         }

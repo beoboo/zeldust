@@ -1,13 +1,16 @@
 use bevy::prelude::*;
 use parse_display::Display;
 
-use crate::constants::SWITCH_ITEM_DURATION;
-use crate::entities::{StatType, Stats};
-use crate::frames::TexturePack;
-use crate::magic::Magic;
-use crate::weapon::Weapon;
-use crate::widgets::{AtlasImageBundle, UiAtlasImage};
-use crate::{GameAssetType, GameAssets};
+use crate::{
+    constants::SWITCH_ITEM_DURATION,
+    entities::{StatType, Stats},
+    frames::TexturePack,
+    magic::Magic,
+    weapon::Weapon,
+    widgets::{AtlasImageBundle, UiAtlasImage},
+    GameAssetType,
+    GameAssets,
+};
 
 const MARGIN: f32 = 10.;
 const PADDING: f32 = 2.;
@@ -156,13 +159,7 @@ pub fn spawn_ui(
         });
 }
 
-fn spawn_bar(
-    parent: &mut ChildBuilder,
-    width: f32,
-    max_width: f32,
-    color: Color,
-    position: UiRect,
-) {
+fn spawn_bar(parent: &mut ChildBuilder, width: f32, max_width: f32, color: Color, position: UiRect) {
     parent
         .spawn(NodeBundle {
             style: Style {
@@ -197,7 +194,7 @@ fn spawn_item_box(
 ) {
     let name = format!("{}/full.png", ty.name());
     let asset_name = format!("textures/{}.json", ty.asset_name());
-    println!("{name} from {asset_name}");
+    // println!("{name} from {asset_name}");
 
     let handle = asset_server.load(asset_name);
     let pack = textures.get(&handle).expect("Texture pack must exist");
@@ -219,11 +216,11 @@ fn spawn_item_box(
         ItemBoxType::Magic(_, m) => {
             commands.insert(m);
             assets.get(GameAssetType::Particles).clone()
-        }
+        },
         ItemBoxType::Weapon(_, w) => {
             commands.insert(w);
             assets.get(GameAssetType::Weapons).clone()
-        }
+        },
     };
 
     commands.with_children(|parent| {
@@ -260,12 +257,7 @@ fn spawn_experience(parent: &mut ChildBuilder, asset_server: &Res<AssetServer>) 
             style: Style {
                 size: Size::AUTO,
                 align_self: AlignSelf::FlexEnd,
-                padding: UiRect::new(
-                    Val::Px(MARGIN),
-                    Val::Px(MARGIN),
-                    Val::Px(PADDING),
-                    Val::Px(PADDING),
-                ),
+                padding: UiRect::new(Val::Px(MARGIN), Val::Px(MARGIN), Val::Px(PADDING), Val::Px(PADDING)),
                 ..default()
             },
             background_color: BACK_COLOR.into(),
@@ -299,10 +291,7 @@ pub fn change_magic_item(
             let mut back_color = box_q.single_mut();
             back_color.0 = Color::GOLD;
 
-            commands.insert_resource(SwitchMagicTimer(Timer::new(
-                SWITCH_ITEM_DURATION,
-                TimerMode::Once,
-            )));
+            commands.insert_resource(SwitchMagicTimer(Timer::new(SWITCH_ITEM_DURATION, TimerMode::Once)));
         }
 
         let current_magic = *current_magic;
@@ -350,10 +339,7 @@ pub fn change_weapon_item(
             let mut back_color = box_q.single_mut();
             back_color.0 = Color::GOLD;
 
-            commands.insert_resource(SwitchWeaponTimer(Timer::new(
-                SWITCH_ITEM_DURATION,
-                TimerMode::Once,
-            )));
+            commands.insert_resource(SwitchWeaponTimer(Timer::new(SWITCH_ITEM_DURATION, TimerMode::Once)));
         }
 
         let current_weapon = *current_weapon;
