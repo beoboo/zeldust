@@ -1,0 +1,8 @@
+(
+    name: Some("Test tileset"),
+    id: 0,
+    tiles: {
+        0: "../tiles/player.ron",
+        1: "../tiles/rock.ron",
+    }
+)

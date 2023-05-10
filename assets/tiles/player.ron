@@ -1,0 +1,4 @@
+(
+  name: "Player",
+  tile: Standard("test/player.png")
+)

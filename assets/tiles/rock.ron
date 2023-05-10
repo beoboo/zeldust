@@ -1,0 +1,4 @@
+(
+  name: "Rock",
+  tile: Standard("test/rock.png")
+)
