@@ -178,7 +178,7 @@ fn main() {
                 move_enemy,
                 render_enemy,
                 update_depth,
-                // handle_collisions,
+                handle_weapon_collisions,
             )
                 .in_set(OnUpdate(AppState::Playing)),
         )
@@ -409,7 +409,7 @@ fn spawn_tile(
 
     let collider_height = TILE_SIZE / 2.0;
 
-    commands
+    let parent = commands
         .spawn((
             SpriteSheetBundle {
                 sprite: TextureAtlasSprite::new(index),
@@ -427,6 +427,10 @@ fn spawn_tile(
                 ColliderDebugColor(Color::ALICE_BLUE),
             ));
         });
+
+    if layer_type.is_attaklable() {
+        parent.insert(Attackable);
+    }
 }
 
 fn spawn_block(

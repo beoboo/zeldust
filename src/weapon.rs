@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_rapier2d::prelude::{ActiveEvents, Collider};
 use parse_display::Display;
 
 use crate::{
@@ -113,6 +114,8 @@ pub fn spawn_weapon(
             },
             *current_weapon,
             PlayerWeapon,
+            ActiveEvents::COLLISION_EVENTS,
+            Collider::cuboid(frame.frame.w / 2.0, frame.frame.h / 2.0),
         ));
     });
 }

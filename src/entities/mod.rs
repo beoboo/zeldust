@@ -15,6 +15,9 @@ mod player;
 #[derive(Component, Deref, DerefMut)]
 pub struct AttackTimer(pub Timer);
 
+#[derive(Component)]
+pub struct Attackable;
+
 #[derive(Debug, Clone, Copy, Display, PartialEq, Reflect)]
 #[display(style = "snake_case")]
 pub enum Status {
