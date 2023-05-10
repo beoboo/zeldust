@@ -289,14 +289,14 @@ fn spawn_ground(
 ) {
     let Ok(window) = window.get_single() else { return; };
 
-    // let handle = asset_server.load("map/ground.png");
+    let handle = asset_server.load("map/ground.png");
 
     let x = (size.width - window.width()) / 2.;
     let y = -((size.height - window.height()) / 2.);
 
     commands.spawn((
         SpriteBundle {
-            // texture: handle.clone(),
+            texture: handle.clone(),
             transform: Transform::from_xyz(x, y, -1000.0),
             ..Default::default()
         },

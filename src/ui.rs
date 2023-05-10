@@ -11,9 +11,9 @@ const PADDING: f32 = 2.;
 const HEALTH_BAR_WIDTH: f32 = 200.;
 const ENERGY_BAR_WIDTH: f32 = 140.;
 const BAR_HEIGHT: f32 = 20.;
-const BACK_COLOR: Color = Color::rgba(0.4, 0.4, 0.4, 0.9);
+// const BACK_COLOR: Color = Color::rgba(0.4, 0.4, 0.4, 0.9);
 const BORDER_COLOR: Color = Color::rgb(0.2, 0.2, 0.2);
-const BORDER_WIDTH: f32 = 3.;
+// const BORDER_WIDTH: f32 = 3.;
 const FONT_SIZE: f32 = 18.0;
 const ITEM_BOX_SIZE: f32 = 80.0;
 
@@ -59,7 +59,7 @@ pub fn spawn_ui(
     // Bottom content
     commands
         .spawn(
-            (NodeBundle {
+            NodeBundle {
                 style: Style {
                     size: Size::new(Val::Percent(100.), Val::Percent(100.)),
                     padding: UiRect::all(Val::Px(MARGIN)),
@@ -69,7 +69,7 @@ pub fn spawn_ui(
                     ..default()
                 },
                 ..default()
-            }),
+            },
         )
         .with_children(|parent| {
             parent

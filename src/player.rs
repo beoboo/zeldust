@@ -49,7 +49,7 @@ impl Stat {
     }
 
     pub fn ratio(&self) -> f32 {
-        (self.value as f32 / self.max as f32)
+        self.value as f32 / self.max as f32
     }
 }
 
