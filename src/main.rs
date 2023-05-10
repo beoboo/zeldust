@@ -2,9 +2,12 @@ use bevy::prelude::*;
 use bevy::window::{PrimaryWindow, WindowResolution};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_prototype_lyon::prelude::*;
+use bevy_rapier2d::prelude::*;
+use rand::Rng;
 
+use crate::collisions::handle_collisions;
 use crate::map::WorldMap;
-use crate::player::{animate_player, handle_input, move_camera, Player, PlayerPositionEvent, spawn_player};
+use crate::player::{animate_player, handle_input, move_camera, Player, PlayerPositionEvent, spawn_player, update_player_position};
 use crate::settings::{CAMERA_SCALE, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE};
 use crate::ui::show_ui;
 
@@ -13,6 +16,7 @@ mod player;
 mod map;
 mod layer;
 mod ui;
+mod collisions;
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Hash, States)]
 enum AppState {
@@ -26,8 +30,10 @@ enum AppState {
 pub struct Position {
     x: f32,
     y: f32,
-    layer: u32,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Component, Reflect)]
+pub struct Layer(u32);
 
 #[derive(Component, Reflect)]
 pub struct Size {
@@ -46,21 +52,22 @@ pub struct MapBackground {
     handle: Handle<Image>,
 }
 
-#[derive(Resource)]
+#[derive(Debug, Resource)]
 pub struct MapSize {
-    width: u32,
-    height: u32,
+    width: f32,
+    height: f32,
 }
 
 #[derive(Component, Reflect)]
 pub struct Map;
 
 #[derive(Component)]
-pub struct MapBorder;
+pub struct StaticCollider;
 
 #[derive(Resource)]
 pub struct GameAssets {
     player: Handle<TextureAtlas>,
+    grass: Handle<TextureAtlas>,
 }
 
 fn main() {
@@ -75,6 +82,9 @@ fn main() {
         }))
         .add_plugin(WorldInspectorPlugin::default())
         // .add_plugin(TilesetPlugin::default())
+        .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
+        .add_plugin(RapierDebugRenderPlugin::default()
+            .disabled())
         .add_plugin(ShapePlugin)
         .register_type::<Position>()
         .register_type::<Player>()
@@ -82,16 +92,20 @@ fn main() {
         .insert_resource(
             WorldMap::new()
                 .load_layer("assets/map/map_FloorBlocks.csv")
+                .load_layer("assets/map/map_Grass.csv")
         )
         .add_state::<AppState>()
-        .add_system(load_background.in_schedule(OnEnter(AppState::Load)))
-        .add_system(load_assets.in_schedule(OnEnter(AppState::Load)))
-        .add_system(setup_bounds.in_set(OnUpdate(AppState::Load)))
-        .add_system(spawn_map.in_set(OnUpdate(AppState::SpawnMap)))
-        .add_system(show_ui.in_set(OnUpdate(AppState::SpawnMap)))
-        .add_system(handle_input.in_set(OnUpdate(AppState::Playing)))
-        .add_system(move_camera.in_set(OnUpdate(AppState::Playing)))
-        .add_system(animate_player.in_set(OnUpdate(AppState::Playing)))
+        .add_systems((load_background, load_assets).in_schedule(OnEnter(AppState::Load)))
+        .add_system(setup_map_position.in_set(OnUpdate(AppState::Load)))
+        .add_systems((spawn_map, show_ui).in_set(OnUpdate(AppState::SpawnMap)))
+        .add_systems((
+            handle_input,
+            // move_player,
+            update_player_position,
+            move_camera,
+            animate_player,
+            handle_collisions,
+        ).in_set(OnUpdate(AppState::Playing)))
         .add_system(position_tiles.in_base_set(CoreSet::PostUpdate))
         .add_event::<PlayerPositionEvent>()
         .run();
@@ -101,15 +115,16 @@ fn load_background(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
-    // println!("load background");
     let image = asset_server.load("map/ground.png");
 
-    commands.spawn(SpriteBundle {
-        texture: image.clone(),
-        ..Default::default()
-    })
-        .insert(Map {})
-        .insert(Position { x: 0., y: 0., layer: 0 });
+    commands.spawn((
+        SpriteBundle {
+            texture: image.clone(),
+            transform: Transform::from_xyz(0., 0., -1000.0),
+            ..Default::default()
+        },
+        Map,
+    ));
 
     commands.insert_resource(MapBackground { handle: image });
 }
@@ -119,22 +134,31 @@ fn load_assets(
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
-    let texture_handle = asset_server.load("player/player.png");
+    let texture_handle = asset_server.load("images/player.png");
     let texture_atlas =
         TextureAtlas::from_grid(texture_handle, Vec2::new(64.0, 64.0), 24, 1, None, None);
 
+    let player_handle = texture_atlases.add(texture_atlas);
+
+    let texture_handle = asset_server.load("images/grass.png");
+    let texture_atlas =
+        TextureAtlas::from_grid(texture_handle, Vec2::new(64.0, 64.0), 24, 1, None, None);
+    let grass_handle = texture_atlases.add(texture_atlas);
+
     let assets = GameAssets {
-        player: texture_atlases.add(texture_atlas)
+        player: player_handle,
+        grass: grass_handle,
     };
 
     commands.insert_resource(assets);
 }
 
-fn setup_bounds(
+fn setup_map_position(
     mut commands: Commands,
     mut app_state: ResMut<NextState<AppState>>,
     mut ev_asset: EventReader<AssetEvent<Image>>,
-    mut map_query: Query<&mut Position, With<Map>>,
+    mut map_query: Query<&mut Transform, With<Map>>,
+    window: Query<&Window, With<PrimaryWindow>>,
     assets: Res<Assets<Image>>,
     bg: Res<MapBackground>,
 ) {
@@ -143,17 +167,23 @@ fn setup_bounds(
         match ev {
             AssetEvent::Created { handle } => {
                 if *handle == bg.handle {
+                    let Ok(window) = window.get_single() else { return; };
+
                     let img = assets.get(&bg.handle).unwrap();
+                    let width= img.texture_descriptor.size.width as f32;
+                    let height = img.texture_descriptor.size.height as f32;
 
                     let size = MapSize {
-                        width: img.texture_descriptor.size.width,
-                        height: img.texture_descriptor.size.height,
+                        width,
+                        height,
                     };
 
-                    // let window = windows.get_primary().unwrap();
-                    let mut map_pos = map_query.single_mut();
-                    map_pos.x = (size.width as f32) / 2.;
-                    map_pos.y = (size.height as f32) / 2.;
+                    // println!("Window: {}x{}", window.width(), window.height());
+                    // println!("Map size: {size:?}");
+
+                    let mut map_transform = map_query.single_mut();
+                    map_transform.translation.x = (size.width - window.width()) / 2.;
+                    map_transform.translation.y = -((size.height - window.height()) / 2.);
 
                     commands.insert_resource(size);
                     app_state.set(AppState::SpawnMap);
@@ -167,11 +197,17 @@ fn setup_bounds(
 fn spawn_map(
     mut commands: Commands,
     mut app_state: ResMut<NextState<AppState>>,
+    window: Query<&Window, With<PrimaryWindow>>,
     map_size: Res<MapSize>,
     assets: Res<GameAssets>,
+    world_map: Res<WorldMap>,
+    asset_server: Res<AssetServer>,
 ) {
+    let Ok(window) = window.get_single() else { return; };
+
     spawn_cameras(&mut commands, &map_size);
-    spawn_player(&mut commands, assets, &map_size);
+    spawn_tiles(&mut commands, world_map, &assets, asset_server);
+    spawn_player(&mut commands, window, &assets, &map_size);
 
     app_state.set(AppState::Playing);
 }
@@ -187,13 +223,14 @@ fn spawn_cameras(
     let mut camera = Camera2dBundle {
         projection: OrthographicProjection {
             scale: CAMERA_SCALE,
+            near: -10000.0,
+            far: 10000.0,
             ..default()
         },
         ..default()
     };
 
-    commands.spawn(camera)
-        .insert(Position { x, y, layer: 999 })
+    commands.spawn((camera, Position { x, y }, Layer(999)))
     ;
     // commands.spawn(UiCameraBundle::default());
 }
@@ -201,72 +238,105 @@ fn spawn_cameras(
 fn spawn_tiles(
     commands: &mut Commands,
     world_map: Res<WorldMap>,
+    assets: &Res<GameAssets>,
     asset_server: Res<AssetServer>,
 ) {
-    // println!("spawn tiles");
-
     let tile_size = TILE_SIZE as f32;
     let half_tile_size = tile_size / 2.;
-    // Spawn the world
-    for (row_idx, row) in world_map.layers[0].data.iter().enumerate() {
-        for (col_idx, &cell) in row.iter().enumerate() {
-            // print!("{}", cell);
-            let x = col_idx as f32 * tile_size + half_tile_size;
-            let y = row_idx as f32 * tile_size + half_tile_size;
 
-            match cell {
-                // 'p' => {
-                //     commands.spawn(OrthographicCameraBundle::new_2d())
-                //         .insert(Position { x, y })
-                //     ;
-                //
-                //     commands.spawn(SpriteBundle {
-                //         texture: asset_server.load("test/player.png"),
-                //         ..Default::default()
-                //     })
-                //         .insert(Position { x, y })
-                //         .insert(Player::default())
-                //     ;
-                // }
-                395 => {
-                    commands.spawn(SpriteBundle {
-                        texture: asset_server.load("test/rock.png"),
-                        ..Default::default()
-                    })
-                        .insert(MapBorder)
-                        .insert(Position { x, y, layer: 1 })
-                        .insert(Size::default())
-                    ;
-                }
-                _ => {
-                    if cell != -1 {
-                        println!("Ignoring: {}", cell);
+    // Spawn the world
+    for (layer_id, layer) in world_map.layers.iter().enumerate() {
+        for (row_idx, row) in layer.data.iter().enumerate() {
+            for (col_idx, &cell) in row.iter().enumerate() {
+                // info!("{}", cell);
+                let x = col_idx as f32 * tile_size + half_tile_size;
+                let y = row_idx as f32 * tile_size + half_tile_size;
+
+                match cell {
+                    8..=10 => {
+                        let mut rng = rand::thread_rng();
+
+                        commands.spawn((
+                            SpriteSheetBundle {
+                                sprite: TextureAtlasSprite::new(rng.gen_range(0..3)),
+                                texture_atlas: assets.grass.clone(),
+                                ..Default::default()
+                            },
+                            RigidBody::Fixed,
+                            Position { x, y },
+                            Layer(layer_id as u32),
+                            Size::default(),
+                        )).with_children(|parent| {
+                            parent.spawn((
+                                // Restitution::coefficient(0.1),
+                                Collider::cuboid(32.0, 16.0),
+                                Transform::from_xyz(0.0, -16.0, 0.0),
+                                ColliderDebugColor(Color::WHITE),
+                            ));
+                        });
+                    }
+                    395 => {
+                        commands.spawn((
+                            SpriteBundle {
+                                texture: asset_server.load("test/rock.png"),
+                                ..Default::default()
+                            },
+                            RigidBody::Fixed,
+                            Position { x, y },
+                            Layer(layer_id as u32),
+                            Size::default(),
+                        )).with_children(|parent| {
+                            parent.spawn((
+                                // Restitution::coefficient(0.1),
+                                Collider::cuboid(32.0, 16.0),
+                                Transform::from_xyz(0.0, -16.0, 0.0),
+                                ColliderDebugColor(Color::WHITE),
+                            ));
+                        });
+                    }
+                    _ => {
+                        if cell != -1 {
+                            info!("Ignoring: {}", cell);
+                        }
                     }
                 }
             }
+            // println!();
         }
-        // println!();
+    }
+}
+
+pub fn from_position(position: &Position, window: &Window) -> Vec3 {
+    fn convert(pos: f32, bound_dim: f32) -> f32 {
+        pos - (bound_dim / 2.)
+    }
+
+    Vec3::new(
+        convert(position.x, window.width()),
+        -convert(position.y, window.height()),
+        convert(position.y, window.height()) + 1000.0,
+    )
+}
+
+pub fn from_translation(translation: Vec3, window: &Window) -> Position {
+    fn convert(pos: f32, bound_dim: f32) -> f32 {
+        pos - (bound_dim / 2.)
+    }
+
+    Position {
+        x: convert(translation.x, -window.width()),
+        y: -convert(translation.y, window.height()),
     }
 }
 
 fn position_tiles(
     window: Query<&Window, With<PrimaryWindow>>,
-    mut q: Query<(&Position, &mut Transform), Changed<Position>>,
+    mut q: Query<(&Position, &mut Transform), (Changed<Position>, Without<Player>)>,
 ) {
-    fn convert(pos: f32, bound_dim: f32) -> f32 {
-        pos - (bound_dim / 2.)
-    }
-
     let Ok(window) = window.get_single() else { return; };
 
     for (pos, mut transform) in q.iter_mut() {
-        transform.translation = Vec3::new(
-            convert(pos.x, window.width() as f32),
-            -convert(pos.y, window.height() as f32),
-            pos.layer as f32,
-        );
-
-        // dbg!(transform.translation);
+        transform.translation = from_position(pos, window);
     }
 }
 

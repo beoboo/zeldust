@@ -1,4 +1,0 @@
-(
-  name: "Player down idle",
-  tile: Standard("player/down_idle.png")
-)
