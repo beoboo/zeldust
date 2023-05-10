@@ -54,6 +54,7 @@ pub fn spawn_player(
     let Ok(window) = window.get_single() else { return; };
 
     let (x, y) = (map_size.width as f32 / 2., map_size.height as f32 / 2.);
+    // let (x, y) = (0., 0.);
     let position = Position { x, y };
 
     let translation = from_position(&position, window);

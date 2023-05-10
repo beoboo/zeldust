@@ -97,7 +97,7 @@ fn main() {
         .insert_resource(ClearColor(Color::rgb(0.04, 0.04, 0.04)))
         .insert_resource(
             WorldMap::new()
-                .load_layer(LayerType::Blocks, "assets/map/map_FloorBlocks.csv")
+                // .load_layer(LayerType::Blocks, "assets/map/map_FloorBlocks.csv")
                 .load_layer(LayerType::Grass, "assets/map/map_Grass.csv")
                 .load_layer(LayerType::Objects, "assets/map/map_Objects.csv")
         )
@@ -106,12 +106,14 @@ fn main() {
         .add_systems((load_ground, load_assets, finish_loading).in_set(OnUpdate(AppState::Loading)))
         .add_systems((
             prepare_assets,
-            spawn_ground,
         ).in_schedule(OnExit(AppState::Loading)))
         .add_systems((
-            spawn_cameras.after(spawn_ground),
+            // debug_tiles,
+            spawn_ground,
+            spawn_cameras,
             spawn_tiles.after(spawn_cameras),
-            spawn_player.after(spawn_tiles),
+            // spawn_player.after(spawn_tiles),
+            spawn_player.after(spawn_cameras)
         ).in_schedule(OnEnter(AppState::Playing)))
         .add_systems((
             handle_input,
@@ -186,6 +188,21 @@ fn prepare_assets(
     tiles_data: Res<Assets<TileSet>>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
+    let handle = asset_server.load("map/ground.png");
+
+    let image = images.get(&handle).expect("Ground image does not exist");
+
+    let width = image.texture_descriptor.size.width as f32;
+    let height = image.texture_descriptor.size.height as f32;
+
+    let size = MapSize {
+        width,
+        height,
+    };
+
+    commands.insert_resource(size);
+
+
     let texture_handle = asset_server.load("images/player.png");
     let texture_atlas =
         TextureAtlas::from_grid(texture_handle, Vec2::new(64.0, 64.0), 24, 1, None, None);
@@ -201,16 +218,19 @@ fn prepare_assets(
 
 
     let handle = asset_server.load("tiles/objects.json");
-    let tile_set = tiles_data.get(&handle).expect("Tile not loaded");
+    let tile_set = tiles_data.get(&handle).expect("Tile set not loaded");
+
+    println!("{tile_set:?}");
 
     let image_handle = asset_server.load("tiles/objects.png");
     let image = images.get(&image_handle).expect("Image not loaded");
 
-    let mut builder = TextureAtlasBuilder::default();
-    builder.add_texture(image_handle, image);
-    let mut atlas = builder.finish(&mut images).expect("Cannot build texture atlas");
+    let mut atlas = TextureAtlas::new_empty(image_handle, image.size());
 
-    for (_, tile) in &tile_set.frames {
+    for (id, tile) in &tile_set.frames {
+        if id == "14.png" {
+            println!("{tile:?}");
+        }
         let frame = &tile.frame;
         let rect = Rect::new(frame.x, frame.y, frame.x + frame.w, frame.y + frame.h);
         atlas.add_texture(rect);
@@ -231,22 +251,12 @@ fn prepare_assets(
 fn spawn_ground(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    images: Res<Assets<Image>>,
     window: Query<&Window, With<PrimaryWindow>>,
+    size: Res<MapSize>,
 ) {
     let Ok(window) = window.get_single() else { return; };
 
     let handle = asset_server.load("map/ground.png");
-
-    let image = images.get(&handle).expect("Ground image does not exist");
-
-    let width = image.texture_descriptor.size.width as f32;
-    let height = image.texture_descriptor.size.height as f32;
-
-    let size = MapSize {
-        width,
-        height,
-    };
 
     let x = (size.width - window.width()) / 2.;
     let y = -((size.height - window.height()) / 2.);
@@ -259,8 +269,6 @@ fn spawn_ground(
         },
         Map,
     ));
-
-    commands.insert_resource(size);
 }
 
 fn spawn_cameras(
@@ -284,6 +292,26 @@ fn spawn_cameras(
     commands.spawn((camera, Position { x, y }));
 }
 
+fn debug_tiles(
+    mut commands: Commands,
+    assets: Res<GameAssets>,
+    atlases: Res<Assets<TextureAtlas>>,
+) {
+    let handle = &assets.layers[&LayerType::Objects];
+    let atlas = atlases.get(&handle).unwrap();
+
+    for (id, texture) in atlas.textures.iter().enumerate() {
+        commands.spawn((
+            SpriteSheetBundle {
+                sprite: TextureAtlasSprite::new(id),
+                texture_atlas: handle.clone(),
+                transform: Transform::from_translation(texture.center().extend(0.0)),
+                ..Default::default()
+            },
+        ));
+    }
+}
+
 fn spawn_tiles(
     mut commands: Commands,
     world_map: Res<WorldMap>,
@@ -295,9 +323,12 @@ fn spawn_tiles(
     for (layer_type, layer) in world_map.layers.iter() {
         for (row_idx, row) in layer.data.iter().enumerate() {
             for (col_idx, &cell) in row.iter().enumerate() {
-                if cell != -1 {
-                    info!("{layer_type:?}: {cell}");
-                }
+                // if cell != 14 && cell != 395 {
+                //     continue;
+                // }
+                // if cell != -1 {
+                //     info!("{layer_type:?}: {cell}");
+                // }
 
                 match cell {
                     0..=20 => {
@@ -306,10 +337,16 @@ fn spawn_tiles(
                         let atlas_handle = &assets.layers[layer_type];
                         let atlas = atlases.get(atlas_handle).unwrap();
                         let image = atlas.textures[index];
-                        let x = (col_idx as f32 + 0.5) * image.width();
-                        let y = (row_idx as f32 + 0.5) * image.height();
+                        let offset = (image.height() - TILE_SIZE) / 2.0;
 
-                        let collider_height = image.height() - TILE_SIZE / 2.0;
+                        let x = (col_idx as f32 + 0.5) * TILE_SIZE;
+                        let y = (row_idx as f32 + 0.5) * TILE_SIZE - offset;
+                        //
+                        // if cell == 14 {
+                        //     info!("{col_idx}, {row_idx}, {x}, {y}, {index}");
+                        // }
+
+                        let collider_height = TILE_SIZE / 2.0;
 
                         commands.spawn((
                             SpriteSheetBundle {
@@ -325,7 +362,7 @@ fn spawn_tiles(
                             parent.spawn((
                                 // Restitution::coefficient(0.1),
                                 Collider::cuboid(image.width() / 2.0, collider_height / 2.0),
-                                Transform::from_xyz(0.0, 0.0, 0.0),
+                                Transform::from_xyz(0.0, -offset, 0.0),
                                 ColliderDebugColor(Color::ALICE_BLUE),
                             ));
                         });
