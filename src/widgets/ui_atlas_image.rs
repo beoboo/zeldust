@@ -1,0 +1,152 @@
+use bevy::prelude::*;
+use bevy::render::Extract;
+use bevy::ui::ExtractedUiNode;
+use bevy::ui::ExtractedUiNodes;
+use bevy::ui::FocusPolicy;
+use bevy::ui::UiStack;
+
+/// A component that represents an image from a `TextureAtlas`.
+#[derive(Component, Clone, Debug, Default, Reflect)]
+#[reflect(Component, Default)]
+pub struct UiAtlasImage {
+    /// assets handle of the texture atlas
+    pub atlas: Handle<TextureAtlas>,
+    /// index of the image in the texture atlas
+    pub index: usize,
+    /// Whether the image should be flipped along its x-axis
+    pub flip_x: bool,
+    /// Whether the image should be flipped along its y-axis
+    pub flip_y: bool,
+}
+
+impl UiAtlasImage {
+    /// Creates a new `UiAtlasImage` from a `TextureAtlas` handle and an index.
+    pub fn new(atlas: Handle<TextureAtlas>, index: usize) -> Self {
+        Self {
+            atlas,
+            index,
+            flip_x: false,
+            flip_y: false,
+        }
+    }
+}
+
+/// The tint color of the image
+///
+/// When combined with [`UiAtlasImage`], tints the provided texture, while still
+/// respecting transparent areas.
+#[derive(Component, Copy, Clone, Debug, Reflect)]
+#[reflect(Component, Default)]
+pub struct TintColor(pub Color);
+
+impl TintColor {
+    pub const DEFAULT: Self = Self(Color::WHITE);
+}
+
+impl Default for TintColor {
+    fn default() -> Self {
+        Self::DEFAULT
+    }
+}
+
+impl From<Color> for TintColor {
+    fn from(color: Color) -> Self {
+        Self(color)
+    }
+}
+
+/// A UI node that is an image from a texture atlas
+#[derive(Bundle, Clone, Debug, Default)]
+pub struct AtlasImageBundle {
+    /// Describes the size of the node
+    pub node: Node,
+    /// Describes the style including flexbox settings
+    pub style: Style,
+    /// The calculated size based on the given image
+    pub calculated_size: CalculatedSize,
+    /// The tint color of the image
+    pub color: TintColor,
+    /// The texture atlas image of the node
+    pub atlas_image: UiAtlasImage,
+    /// Whether this node should block interaction with lower nodes
+    pub focus_policy: FocusPolicy,
+    /// The transform of the node
+    pub transform: Transform,
+    /// The global transform of the node
+    pub global_transform: GlobalTransform,
+    /// Describes the visibility properties of the node
+    pub visibility: Visibility,
+    /// Algorithmically-computed indication of whether an entity is visible and should be extracted for rendering
+    pub computed_visibility: ComputedVisibility,
+    /// Indicates the depth at which the node should appear in the UI
+    pub z_index: ZIndex,
+}
+
+pub fn texture_atlas_image_node_system(
+    texture_atlases: Res<Assets<TextureAtlas>>,
+    mut query: Query<(&mut CalculatedSize, &UiAtlasImage)>,
+) {
+    for (mut calculated_size, atlas_image) in &mut query {
+        if let Some(atlas) = texture_atlases.get(&atlas_image.atlas) {
+            let size = atlas.textures[atlas_image.index].size();
+            if size != calculated_size.size {
+                calculated_size.size = size;
+                calculated_size.preserve_aspect_ratio = true;
+            }
+        }
+    }
+}
+
+#[allow(clippy::type_complexity)]
+pub fn extract_texture_atlas_image_uinodes(
+    mut extracted_uinodes: ResMut<ExtractedUiNodes>,
+    images: Extract<Res<Assets<Image>>>,
+    texture_atlases: Extract<Res<Assets<TextureAtlas>>>,
+    ui_stack: Extract<Res<UiStack>>,
+    uinode_query: Extract<
+        Query<(
+            &Node,
+            &GlobalTransform,
+            &TintColor,
+            &UiAtlasImage,
+            &ComputedVisibility,
+            Option<&CalculatedClip>,
+        )>,
+    >,
+) {
+    for (stack_index, entity) in ui_stack.uinodes.iter().enumerate() {
+        if let Ok((uinode, global_transform, color, atlas_image, visibility, clip)) =
+            uinode_query.get(*entity)
+        {
+            if !visibility.is_visible()
+                || uinode.size().x == 0.
+                || uinode.size().y == 0.
+                || color.0.a() == 0.0
+            {
+                continue;
+            }
+
+            if let Some(texture_atlas) = texture_atlases.get(&atlas_image.atlas) {
+                let image = texture_atlas.texture.clone_weak();
+                if !images.contains(&image) {
+                    continue;
+                }
+                let mut rect = texture_atlas.textures[atlas_image.index];
+                let scale = uinode.size() / rect.size();
+                rect.min *= scale;
+                rect.max *= scale;
+                extracted_uinodes.uinodes.push(ExtractedUiNode {
+                    stack_index,
+                    transform: global_transform.compute_matrix(),
+                    color: color.0,
+                    rect,
+                    image,
+                    atlas_size: Some(texture_atlas.size * scale),
+                    clip: clip.map(|clip| clip.clip),
+                    flip_x: atlas_image.flip_x,
+                    flip_y: atlas_image.flip_y,
+                });
+            }
+        }
+    }
+}
