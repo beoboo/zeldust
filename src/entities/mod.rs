@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::Velocity;
 use parse_display::Display;
 
+use crate::frames::TexturePack;
 pub use enemies::*;
 pub use player::*;
 
@@ -90,10 +91,37 @@ impl Animation {
     }
 }
 
+pub trait AnimatedEntity {
+    fn asset_name(&self) -> String;
+    fn texture_name(&self) -> String;
+    fn num_frames(&self) -> usize;
+}
+
 pub fn update_depth(mut query: Query<(&mut Transform, Ref<Velocity>)>) {
     for (mut transform, previous) in query.iter_mut() {
         if previous.is_changed() {
             transform.translation.z = -transform.translation.y + 1000.0;
         }
+    }
+}
+
+pub fn render_animation(
+    game_entity: &dyn AnimatedEntity,
+    animation: &mut Animation,
+    sprite: &mut TextureAtlasSprite,
+    time: &Res<Time>,
+    asset_server: &Res<AssetServer>,
+    textures: &Res<Assets<TexturePack>>,
+) {
+    let handle = asset_server.load(format!("textures/{}.json", game_entity.asset_name()));
+    let pack = textures.get(&handle).expect("Texture pack must exist");
+    let index = pack.index_of(&game_entity.texture_name());
+
+    if animation.is_paused() {
+        animation.play(game_entity.num_frames());
+        sprite.index = index;
+    } else {
+        let frame = animation.next_frame(time.delta());
+        sprite.index = index + frame;
     }
 }

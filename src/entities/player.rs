@@ -3,7 +3,7 @@ use bevy_rapier2d::prelude::*;
 
 use crate::{
     constants::{ANIMATION_DURATION, TILE_SIZE},
-    entities::{Animation, AttackTimer, Direction, Status},
+    entities::{render_animation, AnimatedEntity, Animation, AttackTimer, Direction, Status},
     frames::TexturePack,
     from_position,
     weapon::PlayerWeapon,
@@ -31,12 +31,6 @@ impl Default for Player {
 }
 
 impl Player {
-    pub fn asset_name(&self) -> String {
-        let postfix = if self.is_moving() { "_0" } else { "" };
-
-        format!("player/{}/{}{postfix}.png", self.status, self.direction)
-    }
-
     pub fn is_moving(&self) -> bool {
         matches!(self.status, Status::Move(_))
     }
@@ -44,8 +38,20 @@ impl Player {
     pub fn is_attacking(&self) -> bool {
         self.status == Status::Attack
     }
+}
 
-    pub fn num_frames(&self) -> usize {
+impl AnimatedEntity for Player {
+    fn asset_name(&self) -> String {
+        "player".to_string()
+    }
+
+    fn texture_name(&self) -> String {
+        let postfix = if self.is_moving() { "_0" } else { "" };
+
+        format!("player/{}/{}{postfix}.png", self.status, self.direction)
+    }
+
+    fn num_frames(&self) -> usize {
         match self.status {
             Status::Attack => 1,
             Status::Idle => 1,
@@ -130,34 +136,15 @@ pub fn spawn_player(commands: &mut Commands, window: &Window, assets: &Res<GameA
         });
 }
 
-pub fn move_camera(
-    mut camera_q: Query<&mut Transform, With<Camera>>,
-    player_q: Query<&Transform, (With<Player>, Without<Camera>)>,
-) {
-    let player_transform = player_q.single();
-    let mut camera_transform = camera_q.single_mut();
-    camera_transform.translation = player_transform.translation;
-}
-
 pub fn render_player(
+    mut query: Query<(&Player, &mut Animation, &mut TextureAtlasSprite)>,
     time: Res<Time>,
-    mut query: Query<(&mut Player, &mut Animation, &mut TextureAtlasSprite)>,
     asset_server: Res<AssetServer>,
     textures: Res<Assets<TexturePack>>,
 ) {
-    let (mut player, mut animation, mut sprite) = query.single_mut();
+    let (player, mut animation, mut sprite) = query.single_mut();
 
-    let handle = asset_server.load("textures/player.json");
-    let pack = textures.get(&handle).expect("Texture pack must exist");
-    let index = pack.index_of(&player.asset_name());
-
-    if animation.is_paused() {
-        animation.play(player.num_frames());
-        sprite.index = index;
-    } else {
-        let frame = animation.next_frame(time.delta());
-        sprite.index = index + frame;
-    }
+    render_animation(player, &mut animation, &mut sprite, &time, &asset_server, &textures);
 }
 
 pub fn end_player_attack(

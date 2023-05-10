@@ -1,10 +1,10 @@
-use bevy::{log, math::Vec3Swizzles, prelude::*};
+use bevy::{math::Vec3Swizzles, prelude::*};
 use bevy_rapier2d::prelude::*;
 use parse_display::Display;
 
 use crate::{
     constants::{ANIMATION_DURATION, ATTACK_DURATION, SPEED, TILE_SIZE},
-    entities::{Animation, AttackTimer, Player, Status},
+    entities::{render_animation, AnimatedEntity, Animation, AttackTimer, Player, Status},
     frames::TexturePack,
     from_position,
     GameAssetType,
@@ -68,27 +68,8 @@ impl Enemy {
         }
     }
 
-    pub fn asset_name(&self) -> String {
-        format!("monsters/{}/{}/0.png", self.ty, self.status)
-    }
-
     pub fn is_attacking(&self) -> bool {
         self.status == Status::Attack
-    }
-
-    pub fn num_frames(&self) -> usize {
-        let frames = match self.ty {
-            EnemyType::Bamboo => [1, 4, 4],
-            EnemyType::Raccoon => [4, 6, 5],
-            EnemyType::Spirit => [1, 4, 4],
-            EnemyType::Squid => [1, 4, 4],
-        };
-
-        match self.status {
-            Status::Attack => frames[0],
-            Status::Idle => frames[1],
-            Status::Move(_) => frames[2],
-        }
     }
 
     pub fn health(&self) -> u32 {
@@ -151,6 +132,31 @@ impl Enemy {
             EnemyType::Raccoon => 400.0,
             EnemyType::Spirit => 350.0,
             EnemyType::Bamboo => 300.0,
+        }
+    }
+}
+
+impl AnimatedEntity for Enemy {
+    fn asset_name(&self) -> String {
+        "monsters".to_string()
+    }
+
+    fn texture_name(&self) -> String {
+        format!("monsters/{}/{}/0.png", self.ty, self.status)
+    }
+
+    fn num_frames(&self) -> usize {
+        let frames = match self.ty {
+            EnemyType::Bamboo => [1, 4, 4],
+            EnemyType::Raccoon => [4, 6, 5],
+            EnemyType::Spirit => [1, 4, 4],
+            EnemyType::Squid => [1, 4, 4],
+        };
+
+        match self.status {
+            Status::Attack => frames[0],
+            Status::Idle => frames[1],
+            Status::Move(_) => frames[2],
         }
     }
 }
@@ -251,22 +257,12 @@ pub fn move_enemy(
 
 pub fn render_enemy(
     time: Res<Time>,
-    mut query: Query<(&mut Enemy, &mut Animation, &mut TextureAtlasSprite)>,
+    mut query: Query<(&Enemy, &mut Animation, &mut TextureAtlasSprite)>,
     asset_server: Res<AssetServer>,
     textures: Res<Assets<TexturePack>>,
 ) {
-    for (mut enemy, mut animation, mut sprite) in query.iter_mut() {
-        let handle = asset_server.load("textures/monsters.json");
-        let pack = textures.get(&handle).expect("Texture pack must exist");
-        let mut index = pack.index_of(&enemy.asset_name());
-
-        if animation.is_paused() {
-            animation.play(enemy.num_frames());
-            sprite.index = index;
-        } else {
-            let frame = animation.next_frame(time.delta());
-            sprite.index = index + frame;
-        }
+    for (enemy, mut animation, mut sprite) in query.iter_mut() {
+        render_animation(enemy, &mut animation, &mut sprite, &time, &asset_server, &textures);
     }
 }
 

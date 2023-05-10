@@ -13,11 +13,11 @@ use enum_iterator::{all, Sequence};
 use parse_display::Display;
 
 use crate::{
-    constants::{CAMERA_SCALE, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE},
+    camera::{move_camera, spawn_camera},
+    constants::{SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE},
     entities::{
         end_enemy_attack,
         end_player_attack,
-        move_camera,
         move_enemy,
         render_enemy,
         render_player,
@@ -45,6 +45,7 @@ use crate::{
     widgets::WidgetsPlugin,
 };
 
+mod camera;
 mod collisions;
 mod constants;
 mod entities;
@@ -161,15 +162,16 @@ fn main() {
             (
                 // debug_tiles,
                 spawn_ground,
-                spawn_cameras,
-                spawn_tiles.after(spawn_cameras),
+                spawn_camera,
+                spawn_tiles.after(spawn_camera),
                 spawn_ui.after(spawn_tiles),
             )
                 .in_schedule(OnEnter(AppState::Playing)),
         )
         .add_systems(
             (
-                move_camera,
+                move_camera
+                ,
                 switch_weapon,
                 switch_magic,
                 change_magic_item,
@@ -321,21 +323,6 @@ fn spawn_ground(
         },
         Map,
     ));
-}
-
-fn spawn_cameras(mut commands: Commands) {
-    // println!("spawn cameras");
-    let camera = Camera2dBundle {
-        projection: OrthographicProjection {
-            scale: CAMERA_SCALE,
-            near: -10000.0,
-            far: 10000.0,
-            ..default()
-        },
-        ..default()
-    };
-
-    commands.spawn(camera);
 }
 //
 // fn debug_tiles(
