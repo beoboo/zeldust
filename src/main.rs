@@ -11,15 +11,15 @@ use enum_iterator::{all, Sequence};
 use parse_display::Display;
 
 use crate::constants::{CAMERA_SCALE, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE};
-use crate::enemies::{spawn_enemy, Enemy};
+use crate::entities::{
+    end_attack, move_camera, render_player, spawn_player, update_player_position, Player,
+};
+use crate::entities::{move_enemy, render_enemy, spawn_enemy, Enemy};
 use crate::events::{SwitchMagic, SwitchWeapon};
 use crate::frames::TexturePack;
 use crate::input::handle_input;
 use crate::magic::{spawn_magic, switch_magic, Magic};
 use crate::map::{LayerType, WorldMap};
-use crate::player::{
-    end_attack, move_camera, render_player, spawn_player, update_player_position, Player,
-};
 use crate::ui::{
     change_magic_item, change_weapon_item, end_switch_magic, end_switch_weapon, spawn_ui,
     MagicItemBox, WeaponItemBox,
@@ -29,14 +29,13 @@ use crate::widgets::WidgetsPlugin;
 
 mod collisions;
 mod constants;
-mod enemies;
+mod entities;
 mod events;
 mod frames;
 mod input;
 mod layer;
 mod magic;
 mod map;
-mod player;
 mod ui;
 mod weapon;
 mod widgets;
@@ -50,21 +49,6 @@ pub enum AppState {
 
 #[derive(Debug, Clone, Copy, PartialEq, Component, Reflect)]
 pub struct Layer(LayerType);
-
-#[derive(Component, Reflect)]
-pub struct Size {
-    width: f32,
-    height: f32,
-}
-
-impl Default for Size {
-    fn default() -> Self {
-        Self {
-            width: TILE_SIZE as f32,
-            height: TILE_SIZE as f32,
-        }
-    }
-}
 
 #[derive(Debug, Resource)]
 pub struct MapSize {
@@ -128,7 +112,9 @@ fn main() {
         .add_plugin(WorldInspectorPlugin::default())
         // .add_plugin(TilesetPlugin::default())
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
-        .add_plugin(RapierDebugRenderPlugin::default().disabled())
+        .add_plugin(
+            RapierDebugRenderPlugin::default(), // .disabled()
+        )
         .add_plugin(ShapePlugin)
         .add_plugin(JsonAssetPlugin::<TexturePack>::new(&["json"]))
         .add_plugin(WidgetsPlugin)
@@ -178,6 +164,8 @@ fn main() {
                 end_switch_magic,
                 change_weapon_item,
                 end_switch_weapon,
+                move_enemy,
+                render_enemy,
                 // handle_collisions,
             )
                 .in_set(OnUpdate(AppState::Playing)),
@@ -317,10 +305,8 @@ fn spawn_ground(
     ));
 }
 
-fn spawn_cameras(mut commands: Commands, map_size: Res<MapSize>) {
+fn spawn_cameras(mut commands: Commands) {
     // println!("spawn cameras");
-    let (x, y) = (map_size.width as f32 / 2., map_size.height as f32 / 2.);
-
     let camera = Camera2dBundle {
         projection: OrthographicProjection {
             scale: CAMERA_SCALE,
@@ -389,6 +375,7 @@ fn spawn_tiles(
                             &window,
                             &asset_server,
                             &assets,
+                            &atlases,
                             &textures,
                             cell,
                             x,
@@ -427,8 +414,8 @@ fn spawn_tile(
 
     let atlas_handle = assets.get(asset_type);
     let atlas = atlases.get(atlas_handle).unwrap();
-    let image = atlas.textures[index];
-    let offset = (image.height() - TILE_SIZE) / 2.0;
+    let rect = atlas.textures[index];
+    let offset = (rect.height() - TILE_SIZE) / 2.0;
 
     let y = y - offset;
 
@@ -444,11 +431,10 @@ fn spawn_tile(
             },
             RigidBody::Fixed,
             Layer(*layer_type),
-            Size::default(),
         ))
         .with_children(|parent| {
             parent.spawn((
-                Collider::cuboid(image.width() / 2.0, collider_height / 2.0),
+                Collider::cuboid(rect.width() / 2.0, collider_height / 2.0),
                 Transform::from_xyz(0.0, -offset, 0.0),
                 ColliderDebugColor(Color::ALICE_BLUE),
             ));
@@ -473,7 +459,6 @@ fn spawn_block(
         Collider::cuboid(TILE_SIZE / 2.0, TILE_SIZE / 2.0),
         Layer(*layer_type),
         ColliderDebugColor(Color::NAVY),
-        Size::default(),
     ));
 }
 

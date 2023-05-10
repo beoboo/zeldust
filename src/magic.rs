@@ -1,11 +1,9 @@
 use bevy::prelude::*;
 use parse_display::Display;
 
-use crate::constants::TILE_SIZE;
+use crate::entities::Player;
 use crate::events::SwitchMagic;
 use crate::frames::TexturePack;
-use crate::player::Direction;
-use crate::player::Player;
 use crate::GameAssets;
 
 #[derive(Component)]

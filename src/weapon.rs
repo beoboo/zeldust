@@ -2,10 +2,10 @@ use bevy::prelude::*;
 use parse_display::Display;
 
 use crate::constants::TILE_SIZE;
+use crate::entities::Direction;
+use crate::entities::Player;
 use crate::events::SwitchWeapon;
 use crate::frames::TexturePack;
-use crate::player::Direction;
-use crate::player::Player;
 use crate::{GameAssetType, GameAssets};
 
 #[derive(Component)]

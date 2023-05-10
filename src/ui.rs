@@ -2,9 +2,9 @@ use bevy::prelude::*;
 use parse_display::Display;
 
 use crate::constants::SWITCH_ITEM_DURATION;
+use crate::entities::{StatType, Stats};
 use crate::frames::TexturePack;
 use crate::magic::Magic;
-use crate::player::{StatType, Stats};
 use crate::weapon::Weapon;
 use crate::widgets::{AtlasImageBundle, UiAtlasImage};
 use crate::{GameAssetType, GameAssets};

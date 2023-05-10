@@ -3,8 +3,9 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy::utils::HashMap;
 use bevy_rapier2d::prelude::*;
-use parse_display::Display;
 
+use crate::constants::TILE_SIZE;
+use crate::entities::{Direction, Status};
 use crate::frames::TexturePack;
 use crate::weapon::PlayerWeapon;
 use crate::{from_position, GameAssetType, GameAssets, Size};
@@ -78,28 +79,12 @@ impl Stats {
 impl Default for Player {
     fn default() -> Self {
         Self {
-            speed: 500.0,
+            speed: 5.0,
             status: Status::Idle,
             direction: Direction::Down,
             is_attacking: false,
         }
     }
-}
-
-#[derive(Debug, Clone, Copy, Display, PartialEq, Reflect)]
-#[display(style = "snake_case")]
-pub enum Status {
-    Idle,
-    Move,
-}
-
-#[derive(Debug, Clone, Copy, Display, PartialEq, Reflect)]
-#[display(style = "snake_case")]
-pub enum Direction {
-    Left,
-    Up,
-    Right,
-    Down,
 }
 
 pub fn spawn_player(
@@ -125,12 +110,11 @@ pub fn spawn_player(
             Velocity::zero(),
             Stats::default(),
             AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
-            Size::default(),
         ))
         .with_children(|parent| {
             parent.spawn((
-                Collider::cuboid(32.0, 16.0),
-                Transform::from_xyz(0.0, -16.0, 0.0),
+                Collider::cuboid(TILE_SIZE / 2.0, TILE_SIZE / 4.0),
+                Transform::from_xyz(0.0, -TILE_SIZE / 4.0, 0.0),
                 ColliderDebugColor(Color::RED),
             ));
         });

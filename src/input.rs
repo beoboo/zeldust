@@ -1,11 +1,12 @@
 use std::time::Duration;
 
+use crate::constants::FPS;
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
+use crate::entities::Direction;
+use crate::entities::{AnimationTimer, AttackTimer, Player, Status};
 use crate::events::{SwitchMagic, SwitchWeapon};
-use crate::player::Direction;
-use crate::player::{AnimationTimer, AttackTimer, Player, Status};
 use crate::weapon::Weapon;
 use crate::StaticCollider;
 
@@ -76,7 +77,7 @@ pub fn handle_input(
     }
 
     if vec != Vec2::ZERO && !player.is_attacking {
-        velocity.linvel = vec * player.speed;
+        velocity.linvel = vec * player.speed * FPS;
 
         if player.status != Status::Move {
             player.status = Status::Move;
