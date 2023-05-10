@@ -190,7 +190,7 @@ impl Player {
         let health = if health > damage {
             health - damage
         } else {
-            0;
+            0
         };
 
         self.stats.set(PlayerStat::Health, health);

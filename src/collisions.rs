@@ -1,4 +1,4 @@
-use bevy::{log, math::Vec3Swizzles, prelude::*};
+use bevy::{math::Vec3Swizzles, prelude::*};
 use bevy_kira_audio::{Audio, AudioControl};
 use bevy_rapier2d::prelude::*;
 use lazy_static::lazy_static;
@@ -11,6 +11,7 @@ use crate::{
     particles::ParticleEffect,
     weapon::{PlayerWeapon, Weapon},
 };
+use crate::events::DamagePlayer;
 
 // Player: GROUP_1
 // Weapon: GROUP_2
@@ -33,67 +34,49 @@ lazy_static! {
 
 pub fn handle_collisions(
     mut contact_events: EventReader<CollisionEvent>,
-    player_q: Query<(Entity, &Children), With<Player>>,
     magic_q: Query<Entity, (With<PlayerMagic>, Without<Player>)>,
     weapon_q: Query<Entity, (With<PlayerWeapon>, Without<Player>)>,
     parent_q: Query<&Parent>,
-    mut player_collision_writer: EventWriter<PlayerCollision>,
     mut magic_collision_writer: EventWriter<MagicCollision>,
     mut weapon_collision_writer: EventWriter<WeaponCollision>,
 ) {
-    let (player, children) = player_q.single();
-
     for contact_event in contact_events.iter() {
-        // println!("Contact: {contact_event:?}");
-        if let CollisionEvent::Started(h1, h2, _event_flag) = contact_event {
-            let mut with_magic = false;
-            for magic in magic_q.iter() {
-                // log::info!("Magic: {magic:?}");
-                if h1 == &magic || h2 == &magic {
-                    log::info!("Magic collision: {h1:?} {h2:?}");
-                    let other = if &magic == h1 { h2 } else { h1 };
+        match contact_event {
+            CollisionEvent::Started(h1, h2, _event_flag) => {
+                let mut with_magic = false;
+                for magic in magic_q.iter() {
+                    if h1 == &magic || h2 == &magic {
+                        let other = if &magic == h1 { h2 } else { h1 };
 
-                    magic_collision_writer.send(MagicCollision::new(
-                        magic.clone(),
-                        parent_q.get(other.clone()).expect("Parent must exist").get(),
-                    ));
+                        magic_collision_writer.send(MagicCollision::new(
+                            magic.clone(),
+                            parent_q.get(other.clone()).expect("Parent must exist").get(),
+                        ));
 
-                    with_magic = true;
-                    break;
+                        with_magic = true;
+                        break;
+                    }
                 }
-            }
 
-            if with_magic {
-                continue;
-            }
-
-            if let Ok(weapon) = weapon_q.get_single() {
-                log::info!("Weapon: {weapon:?}");
-                if h1 == &weapon || h2 == &weapon {
-                    log::info!("Weapon collision: {h1:?} {h2:?}");
-                    let other = if &weapon == h1 { h2 } else { h1 };
-                    weapon_collision_writer.send(WeaponCollision::new(
-                        weapon.clone(),
-                        parent_q.get(other.clone()).expect("Parent must exist").get(),
-                    ));
-
+                if with_magic {
                     continue;
                 }
-            }
 
-            if children.contains(&h1) || children.contains(h2) {
-                log::info!("Player collision: {h1:?} {h2:?}");
+                if let Ok(weapon) = weapon_q.get_single() {
+                    if h1 == &weapon || h2 == &weapon {
+                        let other = if &weapon == h1 { h2 } else { h1 };
+                        weapon_collision_writer.send(WeaponCollision::new(
+                            weapon.clone(),
+                            parent_q.get(other.clone()).expect("Parent must exist").get(),
+                        ));
 
-                let other = if children.contains(h1) { h2 } else { h1 };
-                player_collision_writer.send(PlayerCollision::new(
-                    player.clone(),
-                    parent_q.get(other.clone()).expect("Parent must exist").get(),
-                ));
-
-                continue;
-            }
-
-            log::info!("Unknown collision ({h1:?} : {h2:?})");
+                        continue;
+                    }
+                }
+            },
+            CollisionEvent::Stopped(_h1, _h2, _entity_flag) => {
+                // Not handling this now
+            },
         }
     }
 }
@@ -112,8 +95,6 @@ pub fn handle_magic_collisions(
         let Ok(magic) = magic_q.get(event.magic) else {
             return;
         };
-
-        println!("handling magic collision");
 
         attack_attackable(
             &mut attackable_q,
@@ -137,7 +118,6 @@ pub fn handle_weapon_collisions(
     let player = player_q.single();
 
     for event in weapon_collision_reader.iter() {
-        println!("handling weapon collision");
         let Ok(weapon) = weapon_q.get_single() else {
             return;
         };
@@ -234,34 +214,33 @@ pub fn damage_attackable(
                 .entity(event.0)
                 .insert(HitTimer(Timer::new(HIT_DURATION, TimerMode::Once)));
         } else {
-            log::info!("Unknown collision");
+            info!("Unknown collision");
         }
     }
 }
 
-pub fn handle_player_collisions(
+pub fn damage_player(
     mut commands: Commands,
-    mut player_q: Query<(&mut Player, &Transform)>,
+    mut player_q: Query<(Entity, &mut Player, &Transform)>,
     enemy_q: Query<&Enemy>,
-    mut player_collision_reader: EventReader<PlayerCollision>,
+    mut damage_player_reader: EventReader<DamagePlayer>,
     mut particle_effect_writer: EventWriter<EmitParticleEffect>,
     asset_server: Res<AssetServer>,
     audio: Res<Audio>,
 ) {
-    let (mut player, transform) = player_q.single_mut();
+    let (player_e, mut player, transform) = player_q.single_mut();
 
-    for event in player_collision_reader.iter() {
-        let Ok(enemy) = enemy_q.get(event.other) else {
+    for event in damage_player_reader.iter() {
+        let Ok(enemy) = enemy_q.get(event.0) else {
             // Not an enemy, bailing out...
             continue;
         };
 
         player.hit(enemy.damage());
-        audio
-            .play(asset_server.load(enemy.attack_type().sound()));
+        audio.play(asset_server.load(enemy.attack_type().sound()));
 
         commands
-            .entity(event.player)
+            .entity(player_e)
             .insert(HitTimer(Timer::new(HIT_DURATION, TimerMode::Once)));
 
         particle_effect_writer.send(EmitParticleEffect::new(

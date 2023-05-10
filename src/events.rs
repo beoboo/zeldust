@@ -11,12 +11,6 @@ pub struct PlayerCollision {
     pub other: Entity,
 }
 
-impl PlayerCollision {
-    pub fn new(player: Entity, other: Entity) -> Self {
-        Self { player, other }
-    }
-}
-
 pub struct MagicCollision {
     pub magic: Entity,
     pub other: Entity,
@@ -48,6 +42,8 @@ pub struct EmitParticleEffect {
 pub struct KillAttackable(pub Entity);
 
 pub struct DamageAttackable(pub Entity);
+
+pub struct DamagePlayer(pub Entity);
 
 impl EmitParticleEffect {
     pub fn new(ty: ParticleEffect, pos: Vec3) -> Self {

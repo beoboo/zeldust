@@ -74,11 +74,6 @@ pub fn cast_spell(
     player.can_cast_spell = false;
 
     println!("Casting {}", *current_magic);
-    //
-    // println!("{} {}",
-    //          MAGIC_COLLISION_GROUP.memberships.bits() & PLAYER_MOVE_COLLISION_GROUP.filters.bits() != 0,
-    //          MAGIC_COLLISION_GROUP.filters.bits() & PLAYER_MOVE_COLLISION_GROUP.memberships.bits() != 0,
-    // );
 
     if player.cast_spell(current_magic.cost()) {
         match *current_magic {
@@ -101,9 +96,9 @@ pub fn cast_spell(
                 }
             },
         }
-    }
 
-    audio.play(asset_server.load(current_magic.sound()));
+        audio.play(asset_server.load(current_magic.sound()));
+    }
 }
 
 pub fn switch_magic(mut current_magic: ResMut<Magic>, mut reader: EventReader<SwitchMagic>) {

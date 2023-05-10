@@ -46,8 +46,8 @@ impl Stat {
 
     pub fn upgrade(&mut self) {
         if self.limit < self.max {
-            self.limit = (self.limit * 120) / 100;
-            self.cost = (self.cost * 140) / 100;
+            self.limit = (self.limit as f32 * 1.2).round() as u32;
+            self.cost = (self.cost as f32 * 1.4).round() as u32;
         }
 
         if self.limit > self.max {

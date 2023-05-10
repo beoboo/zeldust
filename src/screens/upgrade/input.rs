@@ -32,21 +32,23 @@ pub fn handle_input(
                 let cost = player.cost_by(selected_stat);
 
                 if player.xp >= cost {
-                    let value_before = player.stats.value(selected_stat);
-                    let limit_before = player.stats.limit(selected_stat);
+                    // let value_before = player.stats.value(selected_stat);
+                    // let limit_before = player.stats.limit(selected_stat);
+
                     player.xp -= cost;
                     player.upgrade(selected_stat);
-                    println!(
-                        "Upgrading {selected_stat}:
-                      - value: {value_before} -> {},
-                      - limit: {limit_before} -> {},
-                      - cost: {cost} -> {}),
-                      - max: {}",
-                        player.value_by(selected_stat),
-                        player.limit_by(selected_stat),
-                        player.cost_by(selected_stat),
-                        player.max_by(selected_stat)
-                    );
+
+                    // println!(
+                    //     "Upgrading {selected_stat}:
+                    //   - value: {value_before} -> {},
+                    //   - limit: {limit_before} -> {},
+                    //   - cost: {cost} -> {}),
+                    //   - max: {}",
+                    //     player.value_by(selected_stat),
+                    //     player.limit_by(selected_stat),
+                    //     player.cost_by(selected_stat),
+                    //     player.max_by(selected_stat)
+                    // );
                 }
             },
             _ => (),

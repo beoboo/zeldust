@@ -22,6 +22,9 @@ use crate::{
     GameAssetType,
     GameAssets,
 };
+use crate::constants::HIT_DURATION;
+use crate::events::{DamagePlayer, EmitParticleEffect};
+use crate::particles::ParticleEffect;
 
 #[derive(Debug, Clone, Copy, Display, PartialEq)]
 #[display(style = "snake_case")]
@@ -269,11 +272,14 @@ pub fn spawn_enemy(
 
 pub fn move_enemy(
     mut commands: Commands,
-    player_q: Query<&Transform, With<Player>>,
+    mut player_q: Query<(Entity, &mut Player, &Transform)>,
     mut enemy_q: Query<(Entity, &mut Enemy, &Transform, &mut Velocity, &mut Animation)>,
-
+    mut damage_player_writer: EventWriter<DamagePlayer>,
+    mut particle_effect_writer: EventWriter<EmitParticleEffect>,
+    asset_server: Res<AssetServer>,
+    audio: Res<Audio>,
 ) {
-    let player_transform = player_q.single();
+    let (player_e, mut player, player_transform) = player_q.single_mut();
 
     for (entity, mut enemy, transform, mut velocity, mut animation) in enemy_q.iter_mut() {
         if enemy.is_attacking() || !enemy.can_move() {
@@ -294,6 +300,8 @@ pub fn move_enemy(
             commands
                 .entity(entity)
                 .insert(AttackTimer(Timer::new(enemy.attack_cooldown(), TimerMode::Once)));
+
+            damage_player_writer.send(DamagePlayer(entity));
         } else if distance < enemy.notice_radius() {
             velocity.linvel = direction.into();
             status = Status::Move(direction);

@@ -14,7 +14,6 @@ use crate::{
         damage_attackable,
         handle_collisions,
         handle_magic_collisions,
-        handle_player_collisions,
         handle_weapon_collisions,
         kill_attackable,
         OBJECTS_COLLISION_GROUP,
@@ -58,6 +57,7 @@ use crate::{
     Map,
     MapSize,
 };
+use crate::collisions::{damage_player};
 
 mod input;
 
@@ -112,7 +112,7 @@ impl Plugin for GameScreenPlugin {
                 render_enemy,
                 update_depth,
                 handle_collisions.run_if(is_playing),
-                handle_player_collisions.run_if(is_playing),
+                damage_player.run_if(is_playing),
                 damage_attackable.run_if(is_playing),
                 kill_attackable.after(damage_attackable).run_if(is_playing),
             )

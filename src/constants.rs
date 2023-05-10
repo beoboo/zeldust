@@ -1,7 +1,7 @@
 use bevy::prelude::Color;
 use std::time::Duration;
 
-pub const STARTING_XP: u32 = 5000;
+pub const STARTING_XP: u32 = 500;
 pub const SPEED: f32 = 100.0;
 pub const TILE_SIZE: f32 = 64.0;
 pub const SCREEN_WIDTH: u32 = 1280;

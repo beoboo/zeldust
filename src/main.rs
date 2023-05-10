@@ -10,19 +10,20 @@ use bevy_inspector_egui::{
     bevy_egui::{EguiContext, EguiPlugin},
     bevy_inspector, egui,
 };
-use bevy_kira_audio::{AudioPlugin, Audio, AudioControl};
+use bevy_kira_audio::{Audio, AudioControl, AudioPlugin};
 use bevy_prototype_lyon::prelude::*;
 use bevy_rapier2d::prelude::*;
 use enum_iterator::{all, Sequence};
 use parse_display::Display;
 
+use crate::events::DamagePlayer;
 use crate::{
     constants::{SCREEN_HEIGHT, SCREEN_WIDTH},
     debug::{DEBUG_PHYSICS, DEBUG_WORLD},
     entities::{Attackable, Enemy, Player},
     events::{
-        DamageAttackable, EmitParticleEffect, KillAttackable, MagicCollision, PlayerCollision, SwitchMagic,
-        SwitchWeapon, WeaponCollision,
+        DamageAttackable, EmitParticleEffect, KillAttackable, MagicCollision, SwitchMagic, SwitchWeapon,
+        WeaponCollision,
     },
     frames::TexturePack,
     magic::Magic,
@@ -136,7 +137,7 @@ fn main() {
     .register_type::<GameMode>()
     .add_event::<SwitchMagic>()
     .add_event::<SwitchWeapon>()
-    .add_event::<PlayerCollision>()
+    .add_event::<DamagePlayer>()
     .add_event::<MagicCollision>()
     .add_event::<WeaponCollision>()
     .add_event::<EmitParticleEffect>()
@@ -168,11 +169,7 @@ fn main() {
     app.run();
 }
 
-fn load_map(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    audio: Res<Audio>,
-) {
+fn load_map(mut commands: Commands, asset_server: Res<AssetServer>, audio: Res<Audio>) {
     // commands.insert_resource(WorldMap::debug_grass());
     commands.insert_resource(
         WorldMap::new()
@@ -182,7 +179,11 @@ fn load_map(
             .load_layer(LayerType::Entities, "assets/map/map_Entities.csv"),
     );
 
-    // audio.play(asset_server.load("audio/main.ogg")).looped().with_playback_rate(1.2);
+    audio
+        .play(asset_server.load("audio/main.ogg"))
+        .looped()
+        .with_playback_rate(1.2)
+        .with_volume(0.4);
 }
 
 fn load_ground(asset_server: Res<AssetServer>, mut assets: ResMut<LoadingAssets>) {
