@@ -30,8 +30,8 @@
     "allowTrim": false,
     "trimMode": "trim",
     "alphaThreshold": "0",
-    "detectIdentical": true,
+    "detectIdentical": false,
     "packer": "MaxRectsBin",
-    "packerMethod": "BestShortSideFit"
+    "packerMethod": "BottomLeftRule"
   }
 }

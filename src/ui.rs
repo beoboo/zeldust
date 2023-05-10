@@ -1,7 +1,9 @@
 use bevy::prelude::*;
+use parse_display::Display;
 
-use crate::constants::SWITCH_WEAPON_DURATION;
+use crate::constants::SWITCH_ITEM_DURATION;
 use crate::frames::TexturePack;
+use crate::magic::Magic;
 use crate::player::{StatType, Stats};
 use crate::weapon::Weapon;
 use crate::widgets::{AtlasImageBundle, UiAtlasImage};
@@ -21,14 +23,45 @@ const FONT_SIZE: f32 = 18.0;
 const ITEM_BOX_SIZE: f32 = 80.0;
 
 #[derive(Component, Resource, Deref, DerefMut)]
+pub struct SwitchMagicTimer(pub Timer);
+
+#[derive(Component, Resource, Deref, DerefMut)]
 pub struct SwitchWeaponTimer(pub Timer);
 
-#[derive(Component)]
-pub struct ItemBox;
+#[derive(Clone, Copy, Display)]
+pub enum ItemBoxType {
+    #[display("{0}")]
+    Magic(Magic, MagicItemBox),
+    #[display("{0}")]
+    Weapon(Weapon, WeaponItemBox),
+}
+
+impl ItemBoxType {
+    pub fn name(&self) -> String {
+        match self {
+            ItemBoxType::Magic(m, _) => format!("{m}"),
+            ItemBoxType::Weapon(w, _) => format!("{w}"),
+        }
+    }
+
+    pub fn asset_name(&self) -> &str {
+        match self {
+            ItemBoxType::Magic(_, _) => "magics",
+            ItemBoxType::Weapon(_, _) => "weapons",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Component, Reflect)]
+pub struct MagicItemBox;
+
+#[derive(Clone, Copy, Component, Reflect)]
+pub struct WeaponItemBox;
 
 pub fn spawn_ui(
     mut commands: Commands,
-    current_weapon: Res<Weapon>,
+    weapon: Res<Weapon>,
+    magic: Res<Magic>,
     asset_server: Res<AssetServer>,
     assets: Res<GameAssets>,
     textures: Res<Assets<TexturePack>>,
@@ -90,7 +123,34 @@ pub fn spawn_ui(
                     ..default()
                 })
                 .with_children(|parent| {
-                    spawn_item_box(parent, &current_weapon, &asset_server, &assets, &textures);
+                    parent
+                        .spawn(NodeBundle {
+                            style: Style {
+                                flex_direction: FlexDirection::Row,
+                                justify_content: JustifyContent::FlexStart,
+                                size: Size::width(Val::Percent(100.)),
+                                ..default()
+                            },
+                            ..default()
+                        })
+                        .with_children(|parent| {
+                            spawn_item_box(
+                                ItemBoxType::Weapon(*weapon, WeaponItemBox),
+                                parent,
+                                &asset_server,
+                                &assets,
+                                &textures,
+                                UiRect::all(Val::Px(0.)),
+                            );
+                            spawn_item_box(
+                                ItemBoxType::Magic(*magic, MagicItemBox),
+                                parent,
+                                &asset_server,
+                                &assets,
+                                &textures,
+                                UiRect::all(Val::Px(-4.0 * PADDING)),
+                            );
+                        });
                     spawn_experience(parent, &asset_server);
                 });
         });
@@ -128,57 +188,70 @@ fn spawn_bar(
 }
 
 fn spawn_item_box(
+    ty: ItemBoxType,
     parent: &mut ChildBuilder,
-    current_weapon: &Res<Weapon>,
     asset_server: &Res<AssetServer>,
     assets: &Res<GameAssets>,
     textures: &Res<Assets<TexturePack>>,
+    margin: UiRect,
 ) {
-    let weapon = **current_weapon;
+    let name = format!("{}_full.png", ty.name());
+    let asset_name = format!("textures/{}.json", ty.asset_name());
+    println!("{name} from {asset_name}");
 
-    let name = format!("full_{weapon}.png");
-    let handle = asset_server.load("textures/weapons.json");
+    let handle = asset_server.load(asset_name);
     let pack = textures.get(&handle).expect("Texture pack must exist");
     let index = pack.index_of(&name);
 
-    parent
-        .spawn((
-            NodeBundle {
+    let mut commands = parent.spawn((NodeBundle {
+        style: Style {
+            size: Size::AUTO,
+            align_self: AlignSelf::FlexEnd,
+            padding: UiRect::all(Val::Px(BORDER_WIDTH)),
+            margin,
+            ..default()
+        },
+        background_color: BORDER_COLOR.into(),
+        ..default()
+    },));
+
+    let atlas = match ty {
+        ItemBoxType::Magic(_, m) => {
+            commands.insert(m);
+            assets.magics.clone()
+        }
+        ItemBoxType::Weapon(_, w) => {
+            commands.insert(w);
+            assets.weapons.clone()
+        }
+    };
+
+    commands.with_children(|parent| {
+        parent
+            .spawn(NodeBundle {
                 style: Style {
-                    size: Size::AUTO,
-                    align_self: AlignSelf::FlexEnd,
-                    padding: UiRect::all(Val::Px(BORDER_WIDTH)),
+                    size: Size::all(Val::Px(ITEM_BOX_SIZE)),
+                    align_self: AlignSelf::FlexStart,
+                    justify_content: JustifyContent::Center,
+                    padding: UiRect::all(Val::Px(MARGIN)),
                     ..default()
                 },
-                background_color: BORDER_COLOR.into(),
-                ..default()
-            },
-            ItemBox,
-        ))
-        .with_children(|parent| {
-            parent
-                .spawn(NodeBundle {
-                    style: Style {
-                        size: Size::all(Val::Px(ITEM_BOX_SIZE)),
-                        align_self: AlignSelf::FlexStart,
-                        justify_content: JustifyContent::Center,
-                        padding: UiRect::all(Val::Px(MARGIN)),
-                        ..default()
-                    },
 
-                    background_color: BACK_COLOR.into(),
+                background_color: BACK_COLOR.into(),
+                ..default()
+            })
+            .with_children(|parent| {
+                let mut commands = parent.spawn((AtlasImageBundle {
+                    atlas_image: UiAtlasImage::new(atlas, index),
                     ..default()
-                })
-                .with_children(|parent| {
-                    parent.spawn((
-                        AtlasImageBundle {
-                            atlas_image: UiAtlasImage::new(assets.weapons.clone(), index),
-                            ..default()
-                        },
-                        Weapon::default(),
-                    ));
-                });
-        });
+                },));
+
+                match ty {
+                    ItemBoxType::Magic(_, _) => commands.insert(Magic::default()),
+                    ItemBoxType::Weapon(_, _) => commands.insert(Weapon::default()),
+                };
+            });
+    });
 }
 
 fn spawn_experience(parent: &mut ChildBuilder, asset_server: &Res<AssetServer>) {
@@ -213,9 +286,60 @@ fn spawn_experience(parent: &mut ChildBuilder, asset_server: &Res<AssetServer>) 
         });
 }
 
-pub fn change_ui_weapon(
+pub fn change_magic_item(
     mut commands: Commands,
-    mut box_q: Query<&mut BackgroundColor, With<ItemBox>>,
+    mut box_q: Query<&mut BackgroundColor, With<MagicItemBox>>,
+    mut magic_q: Query<(&mut UiAtlasImage, &mut Magic)>,
+    current_magic: Res<Magic>,
+    asset_server: Res<AssetServer>,
+    textures: Res<Assets<TexturePack>>,
+) {
+    if current_magic.is_changed() {
+        if !current_magic.is_added() {
+            let mut back_color = box_q.single_mut();
+            back_color.0 = Color::GOLD;
+
+            commands.insert_resource(SwitchMagicTimer(Timer::new(
+                SWITCH_ITEM_DURATION,
+                TimerMode::Once,
+            )));
+        }
+
+        let current_magic = *current_magic;
+
+        for (mut image, mut magic) in magic_q.iter_mut() {
+            *magic = current_magic;
+
+            let name = format!("{current_magic}_full.png");
+            let handle = asset_server.load("textures/magics.json");
+            let pack = textures.get(&handle).expect("Texture pack must exist");
+
+            image.index = pack.index_of(&name);
+        }
+    }
+}
+
+pub fn end_switch_magic(
+    mut commands: Commands,
+    time: Res<Time>,
+    timer: Option<ResMut<SwitchMagicTimer>>,
+    mut box_q: Query<&mut BackgroundColor, With<MagicItemBox>>,
+) {
+    if let Some(mut timer) = timer {
+        timer.0.tick(time.delta());
+
+        if timer.0.finished() {
+            let mut back_color = box_q.single_mut();
+            back_color.0 = BORDER_COLOR;
+
+            commands.remove_resource::<SwitchMagicTimer>();
+        }
+    }
+}
+
+pub fn change_weapon_item(
+    mut commands: Commands,
+    mut box_q: Query<&mut BackgroundColor, With<WeaponItemBox>>,
     mut weapon_q: Query<(&mut UiAtlasImage, &mut Weapon)>,
     current_weapon: Res<Weapon>,
     asset_server: Res<AssetServer>,
@@ -227,7 +351,7 @@ pub fn change_ui_weapon(
             back_color.0 = Color::GOLD;
 
             commands.insert_resource(SwitchWeaponTimer(Timer::new(
-                SWITCH_WEAPON_DURATION,
+                SWITCH_ITEM_DURATION,
                 TimerMode::Once,
             )));
         }
@@ -237,7 +361,7 @@ pub fn change_ui_weapon(
         for (mut image, mut weapon) in weapon_q.iter_mut() {
             *weapon = current_weapon;
 
-            let name = format!("full_{current_weapon}.png");
+            let name = format!("{current_weapon}_full.png");
             let handle = asset_server.load("textures/weapons.json");
             let pack = textures.get(&handle).expect("Texture pack must exist");
 
@@ -250,7 +374,7 @@ pub fn end_switch_weapon(
     mut commands: Commands,
     time: Res<Time>,
     timer: Option<ResMut<SwitchWeaponTimer>>,
-    mut box_q: Query<&mut BackgroundColor, With<ItemBox>>,
+    mut box_q: Query<&mut BackgroundColor, With<WeaponItemBox>>,
 ) {
     if let Some(mut timer) = timer {
         timer.0.tick(time.delta());

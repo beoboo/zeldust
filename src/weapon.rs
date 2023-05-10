@@ -23,6 +23,26 @@ pub enum Weapon {
 }
 
 impl Weapon {
+    pub fn cooldown(&self) -> u32 {
+        match self {
+            Weapon::Axe => 300,
+            Weapon::Lance => 400,
+            Weapon::Rapier => 50,
+            Weapon::Sai => 80,
+            Weapon::Sword => 100,
+        }
+    }
+
+    pub fn damage(&self) -> u32 {
+        match self {
+            Weapon::Axe => 20,
+            Weapon::Lance => 30,
+            Weapon::Rapier => 8,
+            Weapon::Sai => 10,
+            Weapon::Sword => 15,
+        }
+    }
+
     pub fn next(&self) -> Self {
         let index = *self as u8;
         let next = (index + 1) % 5;
@@ -65,7 +85,7 @@ pub fn spawn_weapon(
     let direction = player.direction;
     let weapon = *current_weapon;
 
-    let name = format!("{direction}_{weapon}.png");
+    let name = format!("{weapon}_{direction}.png");
     let handle = asset_server.load("textures/weapons.json");
     let pack = textures.get(&handle).expect("Texture pack must exist");
     let index = pack.index_of(&name);

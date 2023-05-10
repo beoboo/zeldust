@@ -1,16 +1,15 @@
+use std::cell::RefMut;
 use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy::utils::HashMap;
-use bevy::window::PrimaryWindow;
 use bevy_rapier2d::prelude::*;
 use parse_display::Display;
 
-use crate::constants::ATTACK_DURATION;
-use crate::events::{PlayerPositionChanged, SwitchWeapon};
+use crate::events::{SwitchMagic, SwitchWeapon};
 use crate::frames::TexturePack;
-use crate::weapon::PlayerWeapon;
-use crate::{from_position, from_translation, GameAssets, MapSize, Position, Size, StaticCollider};
+use crate::weapon::{PlayerWeapon, Weapon};
+use crate::{from_position, GameAssets, Size, StaticCollider};
 
 #[derive(Component, Deref)]
 pub struct AttackTimer(pub Timer);
@@ -93,7 +92,7 @@ impl Default for Player {
 #[display(style = "snake_case")]
 pub enum Status {
     Idle,
-    Moving,
+    Move,
 }
 
 #[derive(Debug, Clone, Copy, Display, PartialEq, Reflect)]
@@ -106,29 +105,20 @@ pub enum Direction {
 }
 
 pub fn spawn_player(
-    mut commands: Commands,
-    window: Query<&Window, With<PrimaryWindow>>,
-    assets: Res<GameAssets>,
-    map_size: Res<MapSize>,
+    commands: &mut Commands,
+    window: &Window,
+    assets: &Res<GameAssets>,
+    x: f32,
+    y: f32,
 ) {
-    // println!("spawn player");
-    let Ok(window) = window.get_single() else { return; };
-
-    let (x, y) = (map_size.width as f32 / 2., map_size.height as f32 / 2.);
-    // let (x, y) = (0., 0.);
-    let position = Position { x, y };
-
-    let translation = from_position(&position, window);
-
     commands
         .spawn((
             SpriteSheetBundle {
                 sprite: TextureAtlasSprite::new(4),
                 texture_atlas: assets.player.clone(),
-                transform: Transform::from_translation(translation),
+                transform: Transform::from_translation(from_position(x, y, window)),
                 ..Default::default()
             },
-            position,
             Player::default(),
             RigidBody::Dynamic,
             GravityScale(0.0),
@@ -156,6 +146,8 @@ pub fn handle_input(
         Without<StaticCollider>,
     >,
     mut switch_weapon: EventWriter<SwitchWeapon>,
+    mut switch_magic: EventWriter<SwitchMagic>,
+    weapon: Res<Weapon>,
 ) {
     let mut vec = Vec2::default();
 
@@ -189,14 +181,24 @@ pub fn handle_input(
 
     for key in keyboard_input.get_just_pressed() {
         match key {
-            KeyCode::Space | KeyCode::LControl => {
+            KeyCode::Space => {
                 player.is_attacking = true;
-                commands
-                    .entity(entity)
-                    .insert(AttackTimer(Timer::new(ATTACK_DURATION, TimerMode::Once)));
+                commands.entity(entity).insert(AttackTimer(Timer::new(
+                    Duration::from_millis(weapon.cooldown() as _),
+                    TimerMode::Once,
+                )));
+            }
+            KeyCode::LControl => {
+                player.is_attacking = true;
+                // commands
+                //     .entity(entity)
+                //     .insert(MagicTimer(Timer::new(Duration::from_millis(weapon.cooldown() as _), TimerMode::Once)));
             }
             KeyCode::Q => {
                 switch_weapon.send(SwitchWeapon);
+            }
+            KeyCode::E => {
+                switch_magic.send(SwitchMagic);
             }
             _ => (),
         }
@@ -205,8 +207,8 @@ pub fn handle_input(
     if vec != Vec2::ZERO && !player.is_attacking {
         velocity.linvel = vec * player.speed;
 
-        if player.status != Status::Moving {
-            player.status = Status::Moving;
+        if player.status != Status::Move {
+            player.status = Status::Move;
             animation_timer.pause();
         }
     } else {
@@ -215,29 +217,21 @@ pub fn handle_input(
     }
 }
 
-pub fn move_camera(
-    mut query: Query<&mut Position, With<Camera>>,
-    mut position_reader: EventReader<PlayerPositionChanged>,
-) {
-    if let Some(player_position) = position_reader.iter().next() {
-        let mut camera_position = query.single_mut();
-        *camera_position = player_position.0;
+pub fn update_player_position(mut query: Query<(&mut Transform, Ref<Velocity>), With<Player>>) {
+    let (mut transform, previous) = query.single_mut();
+
+    if previous.is_changed() {
+        transform.translation.z = -transform.translation.y + 1000.0;
     }
 }
 
-pub fn update_player_position(
-    window: Query<&Window, With<PrimaryWindow>>,
-    mut query: Query<(&mut Position, &mut Transform), With<Player>>,
-    mut position_writer: EventWriter<PlayerPositionChanged>,
+pub fn move_camera(
+    mut camera_q: Query<&mut Transform, With<Camera>>,
+    player_q: Query<&Transform, (With<Player>, Without<Camera>)>,
 ) {
-    let Ok(window) = window.get_single() else { return; };
-
-    let (mut position, mut transform) = query.single_mut();
-    transform.translation.z = -transform.translation.y + 1000.0;
-
-    *position = from_translation(transform.translation, window);
-
-    position_writer.send(PlayerPositionChanged(*position));
+    let player_transform = player_q.single();
+    let mut camera_transform = camera_q.single_mut();
+    camera_transform.translation = player_transform.translation;
 }
 
 pub fn render_player(
@@ -250,20 +244,23 @@ pub fn render_player(
 
     let direction = player.direction;
     let mut status = player.status.to_string();
-    if player.status == Status::Moving {
-        status = String::from("0");
-    }
 
     if player.is_attacking {
         status = String::from("attack");
     }
 
-    let name = format!("{direction}_{status}.png");
+    let postfix = if player.status == Status::Move {
+        "_0"
+    } else {
+        ""
+    };
+
+    let name = format!("{status}_{direction}{postfix}.png");
     let handle = asset_server.load("textures/player.json");
     let pack = textures.get(&handle).expect("Texture pack must exist");
     let index = pack.index_of(&name);
 
-    if !player.is_attacking && player.status == Status::Moving {
+    if !player.is_attacking && player.status == Status::Move {
         if timer.0.paused() {
             sprite.index = index;
             timer.0.set_duration(Duration::from_secs_f32(0.1));

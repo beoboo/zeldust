@@ -9,22 +9,28 @@ use bevy_prototype_lyon::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 use crate::constants::{CAMERA_SCALE, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE};
-use crate::events::{PlayerPositionChanged, SwitchWeapon};
+use crate::events::{SwitchMagic, SwitchWeapon};
 use crate::frames::TexturePack;
+use crate::magic::{spawn_magic, switch_magic, Magic};
 use crate::map::{LayerType, WorldMap};
 use crate::player::{
     end_attack, handle_input, move_camera, render_player, spawn_player, update_player_position,
     Player,
 };
-use crate::ui::{change_ui_weapon, end_switch_weapon, spawn_ui};
+use crate::ui::{
+    change_magic_item, change_weapon_item, end_switch_magic, end_switch_weapon, spawn_ui,
+    MagicItemBox, WeaponItemBox,
+};
 use crate::weapon::{spawn_weapon, switch_weapon, Weapon};
 use crate::widgets::WidgetsPlugin;
 
 mod collisions;
 mod constants;
+mod enemies;
 mod events;
 mod frames;
 mod layer;
+mod magic;
 mod map;
 mod player;
 mod ui;
@@ -36,12 +42,6 @@ pub enum AppState {
     #[default]
     Loading,
     Playing,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Component, Reflect)]
-pub struct Position {
-    x: f32,
-    y: f32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Component, Reflect)]
@@ -77,6 +77,7 @@ pub struct StaticCollider;
 #[derive(Resource)]
 pub struct GameAssets {
     player: Handle<TextureAtlas>,
+    magics: Handle<TextureAtlas>,
     weapons: Handle<TextureAtlas>,
     layers: HashMap<LayerType, Handle<TextureAtlas>>,
 }
@@ -104,19 +105,22 @@ fn main() {
         .add_plugin(JsonAssetPlugin::<TexturePack>::new(&["json"]))
         .add_plugin(WidgetsPlugin)
         .add_plugin(ResourceInspectorPlugin::<Weapon>::default())
-        .register_type::<Position>()
         .register_type::<Player>()
+        .register_type::<MagicItemBox>()
+        .register_type::<WeaponItemBox>()
+        .add_event::<SwitchMagic>()
         .add_event::<SwitchWeapon>()
-        .add_event::<PlayerPositionChanged>()
         .insert_resource(ClearColor(Color::hex("70deee").unwrap()))
         .insert_resource(
             WorldMap::new()
                 .load_layer(LayerType::Blocks, "assets/map/map_FloorBlocks.csv")
                 .load_layer(LayerType::Grass, "assets/map/map_Grass.csv")
-                .load_layer(LayerType::Objects, "assets/map/map_Objects.csv"),
+                .load_layer(LayerType::Objects, "assets/map/map_Objects.csv")
+                .load_layer(LayerType::Entities, "assets/map/map_Entities.csv"),
         )
         .init_resource::<LoadingAssets>()
         .init_resource::<Weapon>()
+        .init_resource::<Magic>()
         .add_state::<AppState>()
         .add_systems((load_ground, load_assets, finish_loading).in_set(OnUpdate(AppState::Loading)))
         .add_systems((prepare_assets,).in_schedule(OnExit(AppState::Loading)))
@@ -126,8 +130,7 @@ fn main() {
                 spawn_ground,
                 spawn_cameras,
                 spawn_tiles.after(spawn_cameras),
-                spawn_player.after(spawn_cameras),
-                spawn_ui.after(spawn_player),
+                spawn_ui.after(spawn_tiles),
             )
                 .in_schedule(OnEnter(AppState::Playing)),
         )
@@ -139,14 +142,17 @@ fn main() {
                 render_player,
                 spawn_weapon,
                 switch_weapon,
+                spawn_magic,
+                switch_magic,
                 end_attack,
-                change_ui_weapon,
+                change_magic_item,
+                end_switch_magic,
+                change_weapon_item,
                 end_switch_weapon,
                 // handle_collisions,
             )
                 .in_set(OnUpdate(AppState::Playing)),
         )
-        .add_system(position_tiles.in_base_set(CoreSet::PostUpdate))
         .run();
 }
 
@@ -164,7 +170,7 @@ fn load_ground(asset_server: Res<AssetServer>, mut assets: ResMut<LoadingAssets>
 }
 
 fn load_assets(asset_server: Res<AssetServer>, mut assets: ResMut<LoadingAssets>) {
-    for ty in vec!["grass", "objects", "player", "weapons"] {
+    for ty in vec!["grass", "magics", "objects", "player", "weapons"] {
         for asset in vec!["json", "png"] {
             let path = format!("textures/{ty}.{asset}");
             let handle = asset_server.load_untyped(path);
@@ -220,6 +226,15 @@ fn prepare_assets(
         &mut texture_atlases,
         &tiles_data,
     );
+
+    let magics_atlas_handle = build_texture_atlas(
+        "magics",
+        &asset_server,
+        &mut images,
+        &mut texture_atlases,
+        &tiles_data,
+    );
+
     let weapons_atlas_handle = build_texture_atlas(
         "weapons",
         &asset_server,
@@ -250,6 +265,7 @@ fn prepare_assets(
 
     let assets = GameAssets {
         player: player_atlas_handle,
+        magics: magics_atlas_handle,
         weapons: weapons_atlas_handle,
         layers,
     };
@@ -308,7 +324,6 @@ fn spawn_ground(
 
 fn spawn_cameras(mut commands: Commands, map_size: Res<MapSize>) {
     // println!("spawn cameras");
-
     let (x, y) = (map_size.width as f32 / 2., map_size.height as f32 / 2.);
 
     let camera = Camera2dBundle {
@@ -321,7 +336,7 @@ fn spawn_cameras(mut commands: Commands, map_size: Res<MapSize>) {
         ..default()
     };
 
-    commands.spawn((camera, Position { x, y }));
+    commands.spawn((camera));
 }
 //
 // fn debug_tiles(
@@ -344,65 +359,39 @@ fn spawn_cameras(mut commands: Commands, map_size: Res<MapSize>) {
 
 fn spawn_tiles(
     mut commands: Commands,
+    window: Query<&Window, With<PrimaryWindow>>,
     world_map: Res<WorldMap>,
     assets: Res<GameAssets>,
     asset_server: Res<AssetServer>,
     atlases: Res<Assets<TextureAtlas>>,
 ) {
+    let window = window.single();
+
     // Spawn the world
     for (layer_type, layer) in world_map.layers.iter() {
         for (row_idx, row) in layer.data.iter().enumerate() {
             for (col_idx, &cell) in row.iter().enumerate() {
+                let x = (col_idx as f32 + 0.5) * TILE_SIZE;
+                let y = (row_idx as f32 + 0.5) * TILE_SIZE;
+
                 match cell {
                     0..=20 => {
-                        let index = layer_type.to_index(cell as usize);
-
-                        let atlas_handle = &assets.layers[layer_type];
-                        let atlas = atlases.get(atlas_handle).unwrap();
-                        let image = atlas.textures[index];
-                        let offset = (image.height() - TILE_SIZE) / 2.0;
-
-                        let x = (col_idx as f32 + 0.5) * TILE_SIZE;
-                        let y = (row_idx as f32 + 0.5) * TILE_SIZE - offset;
-
-                        let collider_height = TILE_SIZE / 2.0;
-
-                        commands
-                            .spawn((
-                                SpriteSheetBundle {
-                                    sprite: TextureAtlasSprite::new(index),
-                                    texture_atlas: atlas_handle.clone(),
-                                    ..Default::default()
-                                },
-                                RigidBody::Fixed,
-                                Position { x, y },
-                                Layer(*layer_type),
-                                Size::default(),
-                            ))
-                            .with_children(|parent| {
-                                parent.spawn((
-                                    Collider::cuboid(image.width() / 2.0, collider_height / 2.0),
-                                    Transform::from_xyz(0.0, -offset, 0.0),
-                                    ColliderDebugColor(Color::ALICE_BLUE),
-                                ));
-                            });
+                        spawn_tile(
+                            &mut commands,
+                            &window,
+                            &assets,
+                            &atlases,
+                            layer_type,
+                            cell,
+                            x,
+                            y,
+                        );
+                    }
+                    394 => {
+                        spawn_player(&mut commands, &window, &assets, x, y);
                     }
                     395 => {
-                        let x = (col_idx as f32 + 0.5) * TILE_SIZE;
-                        let y = (row_idx as f32 + 0.5) * TILE_SIZE;
-
-                        commands.spawn((
-                            SpriteBundle {
-                                texture: asset_server.load("test/rock.png"),
-                                ..Default::default()
-                            },
-                            RigidBody::Fixed,
-                            Collider::cuboid(TILE_SIZE / 2.0, TILE_SIZE / 2.0),
-                            Position { x, y },
-                            Layer(*layer_type),
-                            ColliderDebugColor(Color::NAVY),
-                            Size::default(),
-                        ));
+                        spawn_block(&mut commands, &window, &asset_server, layer_type, x, y);
                     }
                     _ => {
                         if cell != -1 {
@@ -415,36 +404,100 @@ fn spawn_tiles(
     }
 }
 
-pub fn from_position(position: &Position, window: &Window) -> Vec3 {
+fn spawn_tile(
+    commands: &mut Commands,
+    window: &Window,
+    assets: &Res<GameAssets>,
+    atlases: &Res<Assets<TextureAtlas>>,
+    layer_type: &LayerType,
+    cell: i32,
+    x: f32,
+    y: f32,
+) {
+    let index = layer_type.to_index(cell as usize);
+
+    let atlas_handle = &assets.layers[layer_type];
+    let atlas = atlases.get(atlas_handle).unwrap();
+    let image = atlas.textures[index];
+    let offset = (image.height() - TILE_SIZE) / 2.0;
+
+    let y = y - offset;
+
+    let collider_height = TILE_SIZE / 2.0;
+
+    commands
+        .spawn((
+            SpriteSheetBundle {
+                sprite: TextureAtlasSprite::new(index),
+                texture_atlas: atlas_handle.clone(),
+                transform: Transform::from_translation(from_position(x, y, window)),
+                ..Default::default()
+            },
+            RigidBody::Fixed,
+            Layer(*layer_type),
+            Size::default(),
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                Collider::cuboid(image.width() / 2.0, collider_height / 2.0),
+                Transform::from_xyz(0.0, -offset, 0.0),
+                ColliderDebugColor(Color::ALICE_BLUE),
+            ));
+        });
+}
+
+fn spawn_block(
+    commands: &mut Commands,
+    window: &Window,
+    asset_server: &Res<AssetServer>,
+    layer_type: &LayerType,
+    x: f32,
+    y: f32,
+) {
+    commands.spawn((
+        SpriteBundle {
+            texture: asset_server.load("test/rock.png"),
+            transform: Transform::from_translation(from_position(x, y, window)),
+            ..Default::default()
+        },
+        RigidBody::Fixed,
+        Collider::cuboid(TILE_SIZE / 2.0, TILE_SIZE / 2.0),
+        Layer(*layer_type),
+        ColliderDebugColor(Color::NAVY),
+        Size::default(),
+    ));
+}
+
+pub fn from_position(x: f32, y: f32, window: &Window) -> Vec3 {
     fn convert(pos: f32, bound_dim: f32) -> f32 {
         pos - (bound_dim / 2.)
     }
 
     Vec3::new(
-        convert(position.x, window.width()),
-        -convert(position.y, window.height()),
-        convert(position.y, window.height()) + 1000.0,
+        convert(x, window.width()),
+        -convert(y, window.height()),
+        convert(y, window.height()) + 1000.0,
     )
 }
-
-pub fn from_translation(translation: Vec3, window: &Window) -> Position {
-    fn convert(pos: f32, bound_dim: f32) -> f32 {
-        pos - (bound_dim / 2.)
-    }
-
-    Position {
-        x: convert(translation.x, -window.width()),
-        y: -convert(translation.y, window.height()),
-    }
-}
-
-fn position_tiles(
-    window: Query<&Window, With<PrimaryWindow>>,
-    mut q: Query<(&Position, &mut Transform), (Changed<Position>, Without<Player>)>,
-) {
-    let Ok(window) = window.get_single() else { return; };
-
-    for (pos, mut transform) in q.iter_mut() {
-        transform.translation = from_position(pos, window);
-    }
-}
+//
+// pub fn from_translation(translation: Vec3, window: &Window) -> Position {
+//     fn convert(pos: f32, bound_dim: f32) -> f32 {
+//         pos - (bound_dim / 2.)
+//     }
+//
+//     Position {
+//         x: convert(translation.x, -window.width()),
+//         y: -convert(translation.y, window.height()),
+//     }
+// }
+//
+// fn position_tiles(
+//     window: Query<&Window, With<PrimaryWindow>>,
+//     mut q: Query<(&Position, &mut Transform), (Changed<Position>, Without<Player>)>,
+// ) {
+//     let Ok(window) = window.get_single() else { return; };
+//
+//     for (pos, mut transform) in q.iter_mut() {
+//         transform.translation = from_position(pos, window);
+//     }
+// }

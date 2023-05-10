@@ -1,5 +1,3 @@
-use crate::Position;
+pub struct SwitchMagic;
 
 pub struct SwitchWeapon;
-
-pub struct PlayerPositionChanged(pub Position);
