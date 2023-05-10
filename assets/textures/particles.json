@@ -1,6 +1,6 @@
 {
   "frames": {
-    "particles/raccoon/0.png": {
+    "particles/raccoon_death/00.png": {
       "frame": {
         "x": 0,
         "y": 0,
@@ -24,7 +24,7 @@
         "y": 0.5
       }
     },
-    "particles/raccoon/1.png": {
+    "particles/raccoon_death/01.png": {
       "frame": {
         "x": 0,
         "y": 240,
@@ -48,7 +48,7 @@
         "y": 0.5
       }
     },
-    "particles/raccoon/2.png": {
+    "particles/raccoon_death/02.png": {
       "frame": {
         "x": 0,
         "y": 480,
@@ -72,7 +72,7 @@
         "y": 0.5
       }
     },
-    "particles/raccoon/3.png": {
+    "particles/raccoon_death/03.png": {
       "frame": {
         "x": 0,
         "y": 720,
@@ -96,7 +96,7 @@
         "y": 0.5
       }
     },
-    "particles/raccoon/4.png": {
+    "particles/raccoon_death/04.png": {
       "frame": {
         "x": 0,
         "y": 960,
@@ -120,7 +120,7 @@
         "y": 0.5
       }
     },
-    "particles/raccoon/5.png": {
+    "particles/raccoon_death/05.png": {
       "frame": {
         "x": 0,
         "y": 1200,
@@ -144,7 +144,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf1/leaf1_00000.png": {
+    "particles/leaf1/00.png": {
       "frame": {
         "x": 0,
         "y": 1440,
@@ -168,7 +168,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf1/leaf1_00001.png": {
+    "particles/leaf1/01.png": {
       "frame": {
         "x": 0,
         "y": 1590,
@@ -192,7 +192,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf1/leaf1_00002.png": {
+    "particles/leaf1/02.png": {
       "frame": {
         "x": 0,
         "y": 1740,
@@ -216,7 +216,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf1/leaf1_00003.png": {
+    "particles/leaf1/03.png": {
       "frame": {
         "x": 0,
         "y": 1890,
@@ -240,7 +240,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf1/leaf1_00004.png": {
+    "particles/leaf1/04.png": {
       "frame": {
         "x": 200,
         "y": 1440,
@@ -264,7 +264,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf1/leaf1_00005.png": {
+    "particles/leaf1/05.png": {
       "frame": {
         "x": 200,
         "y": 1590,
@@ -288,7 +288,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf1/leaf1_00006.png": {
+    "particles/leaf1/06.png": {
       "frame": {
         "x": 200,
         "y": 1740,
@@ -312,7 +312,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf1/leaf1_00007.png": {
+    "particles/leaf1/07.png": {
       "frame": {
         "x": 200,
         "y": 1890,
@@ -336,7 +336,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf1/leaf1_00008.png": {
+    "particles/leaf1/08.png": {
       "frame": {
         "x": 240,
         "y": 0,
@@ -360,7 +360,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf1/leaf1_00009.png": {
+    "particles/leaf1/09.png": {
       "frame": {
         "x": 240,
         "y": 150,
@@ -384,7 +384,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf1/leaf1_00010.png": {
+    "particles/leaf1/10.png": {
       "frame": {
         "x": 240,
         "y": 300,
@@ -408,7 +408,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf1/leaf1_00011.png": {
+    "particles/leaf1/11.png": {
       "frame": {
         "x": 240,
         "y": 450,
@@ -432,7 +432,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf2/leaf1_00000.png": {
+    "particles/leaf2/00.png": {
       "frame": {
         "x": 240,
         "y": 600,
@@ -456,7 +456,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf2/leaf1_00001.png": {
+    "particles/leaf2/01.png": {
       "frame": {
         "x": 240,
         "y": 750,
@@ -480,7 +480,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf2/leaf1_00002.png": {
+    "particles/leaf2/02.png": {
       "frame": {
         "x": 240,
         "y": 900,
@@ -504,7 +504,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf2/leaf1_00003.png": {
+    "particles/leaf2/03.png": {
       "frame": {
         "x": 240,
         "y": 1050,
@@ -528,7 +528,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf2/leaf1_00004.png": {
+    "particles/leaf2/04.png": {
       "frame": {
         "x": 240,
         "y": 1200,
@@ -552,7 +552,7 @@
         "y": 0.5
       }
     },
-    "particles/bamboo/0.png": {
+    "particles/bamboo_death/00.png": {
       "frame": {
         "x": 240,
         "y": 1350,
@@ -576,7 +576,7 @@
         "y": 0.5
       }
     },
-    "particles/bamboo/1.png": {
+    "particles/bamboo_death/01.png": {
       "frame": {
         "x": 304,
         "y": 1350,
@@ -600,7 +600,7 @@
         "y": 0.5
       }
     },
-    "particles/claw/0.png": {
+    "particles/claw_attack/00.png": {
       "frame": {
         "x": 368,
         "y": 1350,
@@ -624,7 +624,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf2/leaf1_00005.png": {
+    "particles/leaf2/05.png": {
       "frame": {
         "x": 400,
         "y": 1414,
@@ -648,7 +648,7 @@
         "y": 0.5
       }
     },
-    "particles/claw/1.png": {
+    "particles/claw_attack/01.png": {
       "frame": {
         "x": 432,
         "y": 1350,
@@ -672,7 +672,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf2/leaf1_00006.png": {
+    "particles/leaf2/06.png": {
       "frame": {
         "x": 400,
         "y": 1564,
@@ -696,7 +696,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf2/leaf1_00007.png": {
+    "particles/leaf2/07.png": {
       "frame": {
         "x": 400,
         "y": 1714,
@@ -720,7 +720,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf2/leaf1_00008.png": {
+    "particles/leaf2/08.png": {
       "frame": {
         "x": 400,
         "y": 1864,
@@ -744,7 +744,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf2/leaf1_00009.png": {
+    "particles/leaf2/09.png": {
       "frame": {
         "x": 440,
         "y": 0,
@@ -768,7 +768,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf2/leaf1_00010.png": {
+    "particles/leaf2/10.png": {
       "frame": {
         "x": 440,
         "y": 150,
@@ -792,7 +792,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf2/leaf1_00011.png": {
+    "particles/leaf2/11.png": {
       "frame": {
         "x": 440,
         "y": 300,
@@ -816,7 +816,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf2/leaf1_00012.png": {
+    "particles/leaf2/12.png": {
       "frame": {
         "x": 440,
         "y": 450,
@@ -840,7 +840,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf3/leaf1_00000.png": {
+    "particles/leaf3/00.png": {
       "frame": {
         "x": 440,
         "y": 600,
@@ -864,7 +864,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf3/leaf1_00001.png": {
+    "particles/leaf3/01.png": {
       "frame": {
         "x": 440,
         "y": 750,
@@ -888,7 +888,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf3/leaf1_00002.png": {
+    "particles/leaf3/02.png": {
       "frame": {
         "x": 440,
         "y": 900,
@@ -912,7 +912,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf3/leaf1_00003.png": {
+    "particles/leaf3/03.png": {
       "frame": {
         "x": 440,
         "y": 1050,
@@ -936,7 +936,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf3/leaf1_00004.png": {
+    "particles/leaf3/04.png": {
       "frame": {
         "x": 440,
         "y": 1200,
@@ -960,7 +960,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf3/leaf1_00005.png": {
+    "particles/leaf3/05.png": {
       "frame": {
         "x": 640,
         "y": 1200,
@@ -984,7 +984,7 @@
         "y": 0.5
       }
     },
-    "particles/claw/2.png": {
+    "particles/claw_attack/02.png": {
       "frame": {
         "x": 496,
         "y": 1350,
@@ -1008,7 +1008,7 @@
         "y": 0.5
       }
     },
-    "particles/claw/3.png": {
+    "particles/claw_attack/03.png": {
       "frame": {
         "x": 560,
         "y": 1350,
@@ -1032,7 +1032,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf3/leaf1_00006.png": {
+    "particles/leaf3/06.png": {
       "frame": {
         "x": 600,
         "y": 1414,
@@ -1080,7 +1080,7 @@
         "y": 0.5
       }
     },
-    "particles/heal/frames/0.png": {
+    "particles/heal/00.png": {
       "frame": {
         "x": 688,
         "y": 1350,
@@ -1104,7 +1104,7 @@
         "y": 0.5
       }
     },
-    "particles/heal/frames/1.png": {
+    "particles/heal/01.png": {
       "frame": {
         "x": 752,
         "y": 1350,
@@ -1128,7 +1128,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf3/leaf1_00007.png": {
+    "particles/leaf3/07.png": {
       "frame": {
         "x": 600,
         "y": 1564,
@@ -1152,7 +1152,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf3/leaf1_00008.png": {
+    "particles/leaf3/08.png": {
       "frame": {
         "x": 600,
         "y": 1714,
@@ -1176,7 +1176,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf3/leaf1_00009.png": {
+    "particles/leaf3/09.png": {
       "frame": {
         "x": 600,
         "y": 1864,
@@ -1200,7 +1200,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf4/leaf1_00000.png": {
+    "particles/leaf4/00.png": {
       "frame": {
         "x": 800,
         "y": 1414,
@@ -1224,7 +1224,7 @@
         "y": 0.5
       }
     },
-    "particles/heal/frames/2.png": {
+    "particles/heal/02.png": {
       "frame": {
         "x": 816,
         "y": 1350,
@@ -1248,7 +1248,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf4/leaf1_00001.png": {
+    "particles/leaf4/01.png": {
       "frame": {
         "x": 800,
         "y": 1564,
@@ -1272,7 +1272,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf4/leaf1_00002.png": {
+    "particles/leaf4/02.png": {
       "frame": {
         "x": 800,
         "y": 1714,
@@ -1296,7 +1296,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf4/leaf1_00003.png": {
+    "particles/leaf4/03.png": {
       "frame": {
         "x": 800,
         "y": 1864,
@@ -1320,7 +1320,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf4/leaf1_00004.png": {
+    "particles/leaf4/04.png": {
       "frame": {
         "x": 1000,
         "y": 0,
@@ -1344,7 +1344,7 @@
         "y": 0.5
       }
     },
-    "particles/aura/0.png": {
+    "particles/aura/00.png": {
       "frame": {
         "x": 880,
         "y": 0,
@@ -1368,7 +1368,7 @@
         "y": 0.5
       }
     },
-    "particles/flame/frames/0.png": {
+    "particles/flame/00.png": {
       "frame": {
         "x": 840,
         "y": 0,
@@ -1392,7 +1392,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf4/leaf1_00005.png": {
+    "particles/leaf4/05.png": {
       "frame": {
         "x": 640,
         "y": 0,
@@ -1416,7 +1416,7 @@
         "y": 0.5
       }
     },
-    "particles/flame/frames/01.png": {
+    "particles/flame/01.png": {
       "frame": {
         "x": 840,
         "y": 48,
@@ -1440,7 +1440,7 @@
         "y": 0.5
       }
     },
-    "particles/aura/1.png": {
+    "particles/aura/01.png": {
       "frame": {
         "x": 880,
         "y": 96,
@@ -1464,7 +1464,7 @@
         "y": 0.5
       }
     },
-    "particles/flame/frames/02.png": {
+    "particles/flame/02.png": {
       "frame": {
         "x": 840,
         "y": 96,
@@ -1488,7 +1488,7 @@
         "y": 0.5
       }
     },
-    "particles/flame/frames/03.png": {
+    "particles/flame/03.png": {
       "frame": {
         "x": 840,
         "y": 144,
@@ -1512,7 +1512,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf4/leaf1_00006.png": {
+    "particles/leaf4/06.png": {
       "frame": {
         "x": 640,
         "y": 150,
@@ -1536,7 +1536,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf4/leaf1_00007.png": {
+    "particles/leaf4/07.png": {
       "frame": {
         "x": 1200,
         "y": 0,
@@ -1560,7 +1560,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf4/leaf1_00008.png": {
+    "particles/leaf4/08.png": {
       "frame": {
         "x": 1400,
         "y": 0,
@@ -1584,7 +1584,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf4/leaf1_00009.png": {
+    "particles/leaf4/09.png": {
       "frame": {
         "x": 1600,
         "y": 0,
@@ -1608,7 +1608,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf4/leaf1_00010.png": {
+    "particles/leaf4/10.png": {
       "frame": {
         "x": 1800,
         "y": 0,
@@ -1632,7 +1632,7 @@
         "y": 0.5
       }
     },
-    "particles/flame/frames/04.png": {
+    "particles/flame/04.png": {
       "frame": {
         "x": 2000,
         "y": 0,
@@ -1656,7 +1656,7 @@
         "y": 0.5
       }
     },
-    "particles/flame/frames/05.png": {
+    "particles/flame/05.png": {
       "frame": {
         "x": 2000,
         "y": 48,
@@ -1680,7 +1680,7 @@
         "y": 0.5
       }
     },
-    "particles/flame/frames/06.png": {
+    "particles/flame/06.png": {
       "frame": {
         "x": 2000,
         "y": 96,
@@ -1704,7 +1704,7 @@
         "y": 0.5
       }
     },
-    "particles/flame/frames/07.png": {
+    "particles/flame/07.png": {
       "frame": {
         "x": 2000,
         "y": 144,
@@ -1728,7 +1728,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf5/leaf1_00000.png": {
+    "particles/leaf5/00.png": {
       "frame": {
         "x": 640,
         "y": 300,
@@ -1752,7 +1752,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf5/leaf1_00001.png": {
+    "particles/leaf5/01.png": {
       "frame": {
         "x": 640,
         "y": 450,
@@ -1776,7 +1776,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf5/leaf1_00002.png": {
+    "particles/leaf5/02.png": {
       "frame": {
         "x": 640,
         "y": 600,
@@ -1800,7 +1800,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf5/leaf1_00003.png": {
+    "particles/leaf5/03.png": {
       "frame": {
         "x": 640,
         "y": 750,
@@ -1824,7 +1824,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf5/leaf1_00004.png": {
+    "particles/leaf5/04.png": {
       "frame": {
         "x": 640,
         "y": 900,
@@ -1848,7 +1848,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf5/leaf1_00005.png": {
+    "particles/leaf5/05.png": {
       "frame": {
         "x": 640,
         "y": 1050,
@@ -1872,7 +1872,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf5/leaf1_00006.png": {
+    "particles/leaf5/06.png": {
       "frame": {
         "x": 1000,
         "y": 150,
@@ -1896,7 +1896,7 @@
         "y": 0.5
       }
     },
-    "particles/aura/2.png": {
+    "particles/aura/02.png": {
       "frame": {
         "x": 880,
         "y": 192,
@@ -1920,7 +1920,7 @@
         "y": 0.5
       }
     },
-    "particles/flame/frames/08.png": {
+    "particles/flame/08.png": {
       "frame": {
         "x": 840,
         "y": 192,
@@ -1944,7 +1944,7 @@
         "y": 0.5
       }
     },
-    "particles/flame/frames/09.png": {
+    "particles/flame/09.png": {
       "frame": {
         "x": 840,
         "y": 240,
@@ -1968,7 +1968,7 @@
         "y": 0.5
       }
     },
-    "particles/aura/3.png": {
+    "particles/aura/03.png": {
       "frame": {
         "x": 880,
         "y": 288,
@@ -1992,7 +1992,7 @@
         "y": 0.5
       }
     },
-    "particles/flame/frames/10.png": {
+    "particles/flame/10.png": {
       "frame": {
         "x": 840,
         "y": 288,
@@ -2016,7 +2016,7 @@
         "y": 0.5
       }
     },
-    "particles/flame/frames/11.png": {
+    "particles/flame/11.png": {
       "frame": {
         "x": 840,
         "y": 336,
@@ -2040,7 +2040,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf5/leaf1_00007.png": {
+    "particles/leaf5/07.png": {
       "frame": {
         "x": 1200,
         "y": 150,
@@ -2064,7 +2064,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf5/leaf1_00008.png": {
+    "particles/leaf5/08.png": {
       "frame": {
         "x": 1400,
         "y": 150,
@@ -2088,7 +2088,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf5/leaf1_00009.png": {
+    "particles/leaf5/09.png": {
       "frame": {
         "x": 1600,
         "y": 150,
@@ -2112,7 +2112,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf6/leaf1_00000.png": {
+    "particles/leaf6/00.png": {
       "frame": {
         "x": 1800,
         "y": 150,
@@ -2136,7 +2136,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf6/leaf1_00001.png": {
+    "particles/leaf6/01.png": {
       "frame": {
         "x": 840,
         "y": 384,
@@ -2160,7 +2160,7 @@
         "y": 0.5
       }
     },
-    "particles/heal/frames/3.png": {
+    "particles/heal/03.png": {
       "frame": {
         "x": 1000,
         "y": 300,
@@ -2184,7 +2184,7 @@
         "y": 0.5
       }
     },
-    "particles/heal/frames/4.png": {
+    "particles/heal/04.png": {
       "frame": {
         "x": 1064,
         "y": 300,
@@ -2208,7 +2208,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf6/leaf1_00002.png": {
+    "particles/leaf6/02.png": {
       "frame": {
         "x": 840,
         "y": 534,
@@ -2232,7 +2232,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf6/leaf1_00003.png": {
+    "particles/leaf6/03.png": {
       "frame": {
         "x": 840,
         "y": 684,
@@ -2256,7 +2256,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf6/leaf1_00004.png": {
+    "particles/leaf6/04.png": {
       "frame": {
         "x": 840,
         "y": 834,
@@ -2280,7 +2280,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf6/leaf1_00005.png": {
+    "particles/leaf6/05.png": {
       "frame": {
         "x": 840,
         "y": 984,
@@ -2304,7 +2304,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf6/leaf1_00006.png": {
+    "particles/leaf6/06.png": {
       "frame": {
         "x": 840,
         "y": 1134,
@@ -2328,7 +2328,7 @@
         "y": 0.5
       }
     },
-    "particles/nova/0.png": {
+    "particles/smoke2/00.png": {
       "frame": {
         "x": 880,
         "y": 1284,
@@ -2352,7 +2352,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf6/leaf1_00007.png": {
+    "particles/leaf6/07.png": {
       "frame": {
         "x": 1000,
         "y": 1412,
@@ -2376,7 +2376,7 @@
         "y": 0.5
       }
     },
-    "particles/nova/1.png": {
+    "particles/smoke2/01.png": {
       "frame": {
         "x": 1008,
         "y": 1284,
@@ -2400,7 +2400,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf6/leaf1_00008.png": {
+    "particles/leaf6/08.png": {
       "frame": {
         "x": 1000,
         "y": 1562,
@@ -2424,7 +2424,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf6/leaf1_00009.png": {
+    "particles/leaf6/09.png": {
       "frame": {
         "x": 1000,
         "y": 1712,
@@ -2448,7 +2448,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf6/leaf1_00010.png": {
+    "particles/leaf6/10.png": {
       "frame": {
         "x": 1000,
         "y": 1862,
@@ -2472,7 +2472,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf6/leaf1_00011.png": {
+    "particles/leaf6/11.png": {
       "frame": {
         "x": 1200,
         "y": 300,
@@ -2520,7 +2520,7 @@
         "y": 0.5
       }
     },
-    "particles/slash/0.png": {
+    "particles/slash_attack/00.png": {
       "frame": {
         "x": 1136,
         "y": 364,
@@ -2544,7 +2544,7 @@
         "y": 0.5
       }
     },
-    "particles/slash/1.png": {
+    "particles/slash_attack/01.png": {
       "frame": {
         "x": 1136,
         "y": 428,
@@ -2568,7 +2568,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf_attack/0.png": {
+    "particles/leaf_attack/00.png": {
       "frame": {
         "x": 1040,
         "y": 364,
@@ -2592,7 +2592,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf_attack/1.png": {
+    "particles/leaf_attack/01.png": {
       "frame": {
         "x": 1040,
         "y": 460,
@@ -2616,7 +2616,7 @@
         "y": 0.5
       }
     },
-    "particles/nova/2.png": {
+    "particles/smoke2/02.png": {
       "frame": {
         "x": 1400,
         "y": 300,
@@ -2640,7 +2640,7 @@
         "y": 0.5
       }
     },
-    "particles/nova/3.png": {
+    "particles/smoke2/03.png": {
       "frame": {
         "x": 1528,
         "y": 300,
@@ -2664,7 +2664,7 @@
         "y": 0.5
       }
     },
-    "particles/nova/4.png": {
+    "particles/smoke2/04.png": {
       "frame": {
         "x": 1656,
         "y": 300,
@@ -2688,7 +2688,7 @@
         "y": 0.5
       }
     },
-    "particles/nova/5.png": {
+    "particles/smoke2/05.png": {
       "frame": {
         "x": 1784,
         "y": 300,
@@ -2712,7 +2712,7 @@
         "y": 0.5
       }
     },
-    "particles/smoke2/0.png": {
+    "particles/spirit_death/00.png": {
       "frame": {
         "x": 1912,
         "y": 300,
@@ -2736,7 +2736,7 @@
         "y": 0.5
       }
     },
-    "particles/smoke2/1.png": {
+    "particles/spirit_death/01.png": {
       "frame": {
         "x": 1400,
         "y": 428,
@@ -2760,7 +2760,7 @@
         "y": 0.5
       }
     },
-    "particles/smoke2/2.png": {
+    "particles/spirit_death/02.png": {
       "frame": {
         "x": 1200,
         "y": 450,
@@ -2784,7 +2784,7 @@
         "y": 0.5
       }
     },
-    "particles/slash/2.png": {
+    "particles/slash_attack/02.png": {
       "frame": {
         "x": 1136,
         "y": 492,
@@ -2808,7 +2808,7 @@
         "y": 0.5
       }
     },
-    "particles/slash/3.png": {
+    "particles/slash_attack/03.png": {
       "frame": {
         "x": 1136,
         "y": 556,
@@ -2832,7 +2832,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf_attack/2.png": {
+    "particles/leaf_attack/02.png": {
       "frame": {
         "x": 1040,
         "y": 556,
@@ -2856,7 +2856,7 @@
         "y": 0.5
       }
     },
-    "particles/smoke/0.png": {
+    "particles/smoke/00.png": {
       "frame": {
         "x": 1328,
         "y": 450,
@@ -2880,7 +2880,7 @@
         "y": 0.5
       }
     },
-    "particles/smoke/1.png": {
+    "particles/smoke/01.png": {
       "frame": {
         "x": 1328,
         "y": 514,
@@ -2904,7 +2904,7 @@
         "y": 0.5
       }
     },
-    "particles/smoke2/3.png": {
+    "particles/spirit_death/03.png": {
       "frame": {
         "x": 1528,
         "y": 428,
@@ -2928,7 +2928,7 @@
         "y": 0.5
       }
     },
-    "particles/smoke2/4.png": {
+    "particles/spirit_death/04.png": {
       "frame": {
         "x": 1656,
         "y": 428,
@@ -2952,7 +2952,7 @@
         "y": 0.5
       }
     },
-    "particles/smoke2/5.png": {
+    "particles/spirit_death/05.png": {
       "frame": {
         "x": 1784,
         "y": 428,
@@ -2976,7 +2976,7 @@
         "y": 0.5
       }
     },
-    "particles/smoke_orange/0.png": {
+    "particles/squid_death/00.png": {
       "frame": {
         "x": 1912,
         "y": 428,
@@ -3000,7 +3000,7 @@
         "y": 0.5
       }
     },
-    "particles/smoke_orange/1.png": {
+    "particles/squid_death/01.png": {
       "frame": {
         "x": 1040,
         "y": 652,
@@ -3024,7 +3024,7 @@
         "y": 0.5
       }
     },
-    "particles/smoke_orange/2.png": {
+    "particles/squid_death/02.png": {
       "frame": {
         "x": 1040,
         "y": 780,
@@ -3048,7 +3048,7 @@
         "y": 0.5
       }
     },
-    "particles/smoke_orange/3.png": {
+    "particles/squid_death/03.png": {
       "frame": {
         "x": 1040,
         "y": 908,
@@ -3072,7 +3072,7 @@
         "y": 0.5
       }
     },
-    "particles/smoke_orange/4.png": {
+    "particles/squid_death/04.png": {
       "frame": {
         "x": 1040,
         "y": 1036,
@@ -3096,7 +3096,7 @@
         "y": 0.5
       }
     },
-    "particles/thunder/0.png": {
+    "particles/thunder_attack/00.png": {
       "frame": {
         "x": 1040,
         "y": 1164,
@@ -3120,7 +3120,7 @@
         "y": 0.5
       }
     },
-    "particles/thunder/1.png": {
+    "particles/thunder_attack/01.png": {
       "frame": {
         "x": 1120,
         "y": 1164,
@@ -3144,7 +3144,7 @@
         "y": 0.5
       }
     },
-    "particles/smoke_orange/5.png": {
+    "particles/squid_death/05.png": {
       "frame": {
         "x": 1136,
         "y": 1264,
@@ -3168,7 +3168,7 @@
         "y": 0.5
       }
     },
-    "particles/thunder/2.png": {
+    "particles/thunder_attack/02.png": {
       "frame": {
         "x": 1168,
         "y": 620,
@@ -3192,7 +3192,7 @@
         "y": 0.5
       }
     },
-    "particles/thunder/3.png": {
+    "particles/thunder_attack/03.png": {
       "frame": {
         "x": 1168,
         "y": 720,
@@ -3216,7 +3216,7 @@
         "y": 0.5
       }
     },
-    "particles/thunder/4.png": {
+    "particles/thunder_attack/04.png": {
       "frame": {
         "x": 1168,
         "y": 820,
@@ -3240,7 +3240,7 @@
         "y": 0.5
       }
     },
-    "particles/thunder/5.png": {
+    "particles/thunder_attack/05.png": {
       "frame": {
         "x": 1168,
         "y": 920,
@@ -3264,7 +3264,7 @@
         "y": 0.5
       }
     },
-    "particles/thunder/6.png": {
+    "particles/thunder_attack/06.png": {
       "frame": {
         "x": 1168,
         "y": 1020,
@@ -3288,7 +3288,7 @@
         "y": 0.5
       }
     },
-    "particles/thunder/7.png": {
+    "particles/thunder_attack/07.png": {
       "frame": {
         "x": 1200,
         "y": 1120,
@@ -3312,7 +3312,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf_attack/3.png": {
+    "particles/leaf_attack/03.png": {
       "frame": {
         "x": 1248,
         "y": 578,
@@ -3336,7 +3336,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf_attack/4.png": {
+    "particles/leaf_attack/04.png": {
       "frame": {
         "x": 1248,
         "y": 674,
@@ -3360,7 +3360,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf_attack/5.png": {
+    "particles/leaf_attack/05.png": {
       "frame": {
         "x": 1248,
         "y": 770,
@@ -3384,7 +3384,7 @@
         "y": 0.5
       }
     },
-    "particles/leaf_attack/6.png": {
+    "particles/leaf_attack/06.png": {
       "frame": {
         "x": 1248,
         "y": 866,
@@ -3408,7 +3408,7 @@
         "y": 0.5
       }
     },
-    "particles/smoke/2.png": {
+    "particles/smoke/02.png": {
       "frame": {
         "x": 1248,
         "y": 962,
@@ -3432,7 +3432,7 @@
         "y": 0.5
       }
     },
-    "particles/smoke/3.png": {
+    "particles/smoke/03.png": {
       "frame": {
         "x": 1248,
         "y": 1026,
@@ -3456,7 +3456,7 @@
         "y": 0.5
       }
     },
-    "particles/smoke/4.png": {
+    "particles/smoke/04.png": {
       "frame": {
         "x": 1200,
         "y": 1392,
@@ -3480,7 +3480,7 @@
         "y": 0.5
       }
     },
-    "particles/smoke/5.png": {
+    "particles/smoke/05.png": {
       "frame": {
         "x": 1200,
         "y": 1456,
@@ -3504,7 +3504,7 @@
         "y": 0.5
       }
     },
-    "particles/sparkle/0.png": {
+    "particles/sparkle/00.png": {
       "frame": {
         "x": 1200,
         "y": 1520,
@@ -3528,7 +3528,7 @@
         "y": 0.5
       }
     },
-    "particles/sparkle/1.png": {
+    "particles/sparkle/01.png": {
       "frame": {
         "x": 1200,
         "y": 1584,
@@ -3552,7 +3552,7 @@
         "y": 0.5
       }
     },
-    "particles/sparkle/2.png": {
+    "particles/sparkle/02.png": {
       "frame": {
         "x": 1200,
         "y": 1648,
@@ -3576,7 +3576,7 @@
         "y": 0.5
       }
     },
-    "particles/sparkle/3.png": {
+    "particles/sparkle/03.png": {
       "frame": {
         "x": 1200,
         "y": 1712,
@@ -3600,7 +3600,7 @@
         "y": 0.5
       }
     },
-    "particles/sparkle/4.png": {
+    "particles/sparkle/04.png": {
       "frame": {
         "x": 1200,
         "y": 1776,

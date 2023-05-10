@@ -1,7 +1,10 @@
 use std::time::Duration;
 
 use bevy::prelude::*;
-use bevy_rapier2d::prelude::{ActiveEvents, Collider};
+use bevy_rapier2d::{
+    prelude::{ActiveEvents, Collider},
+    render::ColliderDebugColor,
+};
 use parse_display::Display;
 
 use crate::{
@@ -122,6 +125,7 @@ pub fn spawn_weapon(
             ActiveEvents::COLLISION_EVENTS,
             Collider::cuboid(frame.frame.w / 2.0, frame.frame.h / 2.0),
             WEAPON_COLLISION_GROUP.clone(),
+            ColliderDebugColor(Color::GOLD),
         ));
     });
 }

@@ -52,10 +52,8 @@ impl WorldMap {
 
         Self { layers }
     }
-}
 
-impl Default for WorldMap {
-    fn default() -> Self {
+    pub fn simple() -> Self {
         #[rustfmt::skip]
         let data = vec![
             vec![20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,],
@@ -86,5 +84,52 @@ impl Default for WorldMap {
         layers.insert(LayerType::Blocks, layer);
 
         Self { layers }
+    }
+
+    pub fn debug_enemy() -> Self {
+        let mut layers = HashMap::default();
+
+        layers.insert(LayerType::Blocks, Self::empty_layer());
+        layers.insert(LayerType::Entities, Self::one_enemy_layer());
+
+        Self { layers }
+    }
+
+    fn one_enemy_layer() -> Layer {
+        #[rustfmt::skip]
+        let data = vec![
+            vec![-1, -1,  -1, -1, -1, ],
+            vec![-1, -1,  -1, -1, -1, ],
+            vec![-1, -1, 394, -1, -1, ],
+            vec![-1, -1,  -1, -1, -1, ],
+            vec![-1, -1,  -1, -1, -1, ],
+            vec![-1, -1,  -1, -1, -1, ],
+            vec![-1, -1,  -1, -1, -1, ],
+            vec![-1, -1,  -1, -1, -1, ],
+            vec![-1, -1, 391, -1, -1, ],
+            vec![-1, -1,  -1, -1, -1, ],
+            vec![-1, -1,  -1, -1, -1, ],
+        ];
+
+        Layer { data }
+    }
+
+    fn empty_layer() -> Layer {
+        #[rustfmt::skip]
+        let data = vec![
+            vec![395, 395, 395, 395, 395, ],
+            vec![395,  -1,  -1,  -1, 395, ],
+            vec![395,  -1,  -1,  -1, 395, ],
+            vec![395,  -1,  -1,  -1, 395, ],
+            vec![395,  -1,  -1,  -1, 395, ],
+            vec![395,  -1,  -1,  -1, 395, ],
+            vec![395,  -1,  -1,  -1, 395, ],
+            vec![395,  -1,  -1,  -1, 395, ],
+            vec![395,  -1,  -1,  -1, 395, ],
+            vec![395,  -1,  -1,  -1, 395, ],
+            vec![395, 395, 395, 395, 395, ],
+        ];
+
+        Layer { data }
     }
 }

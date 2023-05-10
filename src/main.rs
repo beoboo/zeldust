@@ -32,11 +32,12 @@ use crate::{
         Enemy,
         Player,
     },
-    events::{PlayerCollision, SwitchMagic, SwitchWeapon, WeaponCollision},
+    events::{EmitParticleEffect, PlayerCollision, SwitchMagic, SwitchWeapon, WeaponCollision},
     frames::TexturePack,
     input::handle_input,
     magic::{spawn_magic, switch_magic, Magic},
     map::{LayerType, WorldMap},
+    particles::{animate_particles, spawn_particles},
     ui::{
         change_magic_item,
         change_weapon_item,
@@ -63,6 +64,7 @@ mod input;
 mod layer;
 mod magic;
 mod map;
+mod particles;
 mod ui;
 mod weapon;
 mod widgets;
@@ -105,7 +107,7 @@ impl From<&LayerType> for GameAssetType {
         match layer {
             LayerType::Grass => GameAssetType::Grass,
             LayerType::Objects => GameAssetType::Objects,
-            _ => unreachable!(),
+            s => unreachable!("Level {s:?} cannot be converted"),
         }
     }
 }
@@ -153,22 +155,16 @@ fn main() {
         .add_event::<SwitchWeapon>()
         .add_event::<PlayerCollision>()
         .add_event::<WeaponCollision>()
+        .add_event::<EmitParticleEffect>()
         .insert_resource(ClearColor(Color::hex("70deee").unwrap()))
-        .insert_resource(
-            WorldMap::new()
-                .load_layer(LayerType::Blocks, "assets/map/map_FloorBlocks.csv")
-                .load_layer(LayerType::Grass, "assets/map/map_Grass.csv")
-                .load_layer(LayerType::Objects, "assets/map/map_Objects.csv")
-                .load_layer(LayerType::Entities, "assets/map/map_Entities.csv"),
-        )
         .init_resource::<LoadingAssets>()
         .init_resource::<Weapon>()
         .init_resource::<Magic>()
         .add_state::<AppState>()
+        .add_system(load_map.in_schedule(OnEnter(AppState::Loading)))
         .add_systems((load_ground, load_assets, finish_loading).in_set(OnUpdate(AppState::Loading)))
         .add_system(prepare_assets.in_schedule(OnExit(AppState::Loading)))
-        .add_systems(
-            (
+        .add_systems((
                 // debug_tiles,
                 spawn_ground,
                 spawn_camera,
@@ -177,8 +173,7 @@ fn main() {
             )
                 .in_schedule(OnEnter(AppState::Playing)),
         )
-        .add_systems(
-            (
+        .add_systems((
                 move_camera,
                 switch_weapon,
                 switch_magic,
@@ -191,8 +186,7 @@ fn main() {
             )
                 .in_set(OnUpdate(AppState::Playing)),
         )
-        .add_systems(
-            (
+        .add_systems((
                 handle_input,
                 spawn_weapon,
                 spawn_magic,
@@ -209,6 +203,12 @@ fn main() {
                 handle_weapon_collisions,
             )
                 .in_set(OnUpdate(AppState::Playing)),
+        )
+        .add_systems((
+                         spawn_particles,
+                         animate_particles,
+            )
+                .in_set(OnUpdate(AppState::Playing)),
         );
 
     if DEBUG_PHYSICS {
@@ -216,6 +216,17 @@ fn main() {
     }
 
     app.run();
+}
+
+fn load_map(mut commands: Commands) {
+    // commands.insert_resource(WorldMap::debug_enemy());
+    commands.insert_resource(
+        WorldMap::new()
+            .load_layer(LayerType::Blocks, "assets/map/map_FloorBlocks.csv")
+            .load_layer(LayerType::Grass, "assets/map/map_Grass.csv")
+            .load_layer(LayerType::Objects, "assets/map/map_Objects.csv")
+            .load_layer(LayerType::Entities, "assets/map/map_Entities.csv"),
+    );
 }
 
 fn load_ground(asset_server: Res<AssetServer>, mut assets: ResMut<LoadingAssets>) {
@@ -442,32 +453,32 @@ fn spawn_tile(
 
     let collider_height = TILE_SIZE / 2.0;
 
-    let mut parent = commands.spawn((
-        SpriteSheetBundle {
-            sprite: TextureAtlasSprite::new(index),
-            texture_atlas: atlas_handle.clone(),
-            transform: Transform::from_translation(from_position(x, y, window)),
-            ..Default::default()
-        },
-        RigidBody::Fixed,
-        Layer(*layer_type),
-    ));
-
-    parent.with_children(|parent| {
-        let mut child = parent.spawn((
-            Collider::cuboid(rect.width() / 2.0, collider_height / 2.0),
-            Transform::from_xyz(0.0, -offset, 0.0),
-            ColliderDebugColor(Color::ALICE_BLUE),
-        ));
-
-        if layer_type.is_attackable() {
-            child.insert((
-                Attackable::new(1),
-                OBJECTS_COLLISION_GROUP.clone(),
-                ActiveEvents::COLLISION_EVENTS,
+    commands
+        .spawn((
+            SpriteSheetBundle {
+                sprite: TextureAtlasSprite::new(index),
+                texture_atlas: atlas_handle.clone(),
+                transform: Transform::from_translation(from_position(x, y, window)),
+                ..Default::default()
+            },
+            RigidBody::Fixed,
+            Layer(*layer_type),
+        ))
+        .with_children(|parent| {
+            let mut child = parent.spawn((
+                Collider::cuboid(rect.width() / 2.0, collider_height / 2.0),
+                Transform::from_xyz(0.0, -offset, 0.0),
+                ColliderDebugColor(Color::ALICE_BLUE),
             ));
-        }
-    });
+
+            if layer_type.is_attackable() {
+                child.insert((
+                    Attackable::new(1),
+                    OBJECTS_COLLISION_GROUP.clone(),
+                    ActiveEvents::COLLISION_EVENTS,
+                ));
+            }
+        });
 }
 
 fn spawn_block(
@@ -478,17 +489,22 @@ fn spawn_block(
     x: f32,
     y: f32,
 ) {
-    commands.spawn((
-        SpriteBundle {
-            texture: asset_server.load("test/rock.png"),
-            transform: Transform::from_translation(from_position(x, y, window)),
-            ..Default::default()
-        },
-        RigidBody::Fixed,
-        Collider::cuboid(TILE_SIZE / 2.0, TILE_SIZE / 2.0),
-        Layer(*layer_type),
-        ColliderDebugColor(Color::NAVY),
-    ));
+    commands
+        .spawn((
+            SpriteBundle {
+                texture: asset_server.load("test/rock.png"),
+                transform: Transform::from_translation(from_position(x, y, window)),
+                ..Default::default()
+            },
+            RigidBody::Fixed,
+            Layer(*layer_type),
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                Collider::cuboid(TILE_SIZE / 2.0, TILE_SIZE / 2.0),
+                ColliderDebugColor(Color::NAVY),
+            ));
+        });
 }
 
 pub fn from_position(x: f32, y: f32, window: &Window) -> Vec3 {

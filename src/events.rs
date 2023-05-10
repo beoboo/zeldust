@@ -1,4 +1,6 @@
-use bevy::prelude::Entity;
+use bevy::prelude::*;
+
+use crate::particles::ParticleEffect;
 
 pub struct SwitchMagic;
 
@@ -23,5 +25,16 @@ pub struct WeaponCollision {
 impl WeaponCollision {
     pub fn new(weapon: Entity, other: Entity) -> Self {
         Self { weapon, other }
+    }
+}
+
+pub struct EmitParticleEffect {
+    pub ty: ParticleEffect,
+    pub pos: Vec3,
+}
+
+impl EmitParticleEffect {
+    pub fn new(ty: ParticleEffect, pos: Vec3) -> Self {
+        Self { ty, pos }
     }
 }

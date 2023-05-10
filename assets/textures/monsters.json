@@ -1,6 +1,6 @@
 {
   "frames": {
-    "monsters/raccoon/attack/0.png": {
+    "monsters/raccoon/attack/00.png": {
       "frame": {
         "x": 0,
         "y": 0,
@@ -24,7 +24,7 @@
         "y": 0.5
       }
     },
-    "monsters/raccoon/attack/1.png": {
+    "monsters/raccoon/attack/01.png": {
       "frame": {
         "x": 0,
         "y": 240,
@@ -48,7 +48,7 @@
         "y": 0.5
       }
     },
-    "monsters/raccoon/attack/2.png": {
+    "monsters/raccoon/attack/02.png": {
       "frame": {
         "x": 0,
         "y": 480,
@@ -72,7 +72,7 @@
         "y": 0.5
       }
     },
-    "monsters/raccoon/attack/3.png": {
+    "monsters/raccoon/attack/03.png": {
       "frame": {
         "x": 0,
         "y": 720,
@@ -96,7 +96,7 @@
         "y": 0.5
       }
     },
-    "monsters/raccoon/idle/0.png": {
+    "monsters/raccoon/idle/00.png": {
       "frame": {
         "x": 0,
         "y": 960,
@@ -120,7 +120,7 @@
         "y": 0.5
       }
     },
-    "monsters/raccoon/idle/2.png": {
+    "monsters/raccoon/idle/02.png": {
       "frame": {
         "x": 0,
         "y": 1200,
@@ -144,7 +144,7 @@
         "y": 0.5
       }
     },
-    "monsters/raccoon/idle/3.png": {
+    "monsters/raccoon/idle/03.png": {
       "frame": {
         "x": 0,
         "y": 1440,
@@ -168,7 +168,7 @@
         "y": 0.5
       }
     },
-    "monsters/raccoon/idle/4.png": {
+    "monsters/raccoon/idle/04.png": {
       "frame": {
         "x": 0,
         "y": 1680,
@@ -192,7 +192,7 @@
         "y": 0.5
       }
     },
-    "monsters/bamboo/attack/0.png": {
+    "monsters/bamboo/attack/00.png": {
       "frame": {
         "x": 0,
         "y": 1920,
@@ -216,7 +216,7 @@
         "y": 0.5
       }
     },
-    "monsters/bamboo/idle/1.png": {
+    "monsters/bamboo/idle/01.png": {
       "frame": {
         "x": 0,
         "y": 1984,
@@ -240,7 +240,7 @@
         "y": 0.5
       }
     },
-    "monsters/bamboo/idle/3.png": {
+    "monsters/bamboo/idle/03.png": {
       "frame": {
         "x": 64,
         "y": 1920,
@@ -264,7 +264,7 @@
         "y": 0.5
       }
     },
-    "monsters/spirit/attack/0.png": {
+    "monsters/spirit/attack/00.png": {
       "frame": {
         "x": 64,
         "y": 1984,
@@ -288,7 +288,7 @@
         "y": 0.5
       }
     },
-    "monsters/spirit/idle/0.png": {
+    "monsters/spirit/idle/00.png": {
       "frame": {
         "x": 128,
         "y": 1920,
@@ -312,7 +312,7 @@
         "y": 0.5
       }
     },
-    "monsters/spirit/idle/1.png": {
+    "monsters/spirit/idle/01.png": {
       "frame": {
         "x": 128,
         "y": 1984,
@@ -336,7 +336,7 @@
         "y": 0.5
       }
     },
-    "monsters/spirit/idle/2.png": {
+    "monsters/spirit/idle/02.png": {
       "frame": {
         "x": 192,
         "y": 1920,
@@ -360,7 +360,7 @@
         "y": 0.5
       }
     },
-    "monsters/spirit/idle/3.png": {
+    "monsters/spirit/idle/03.png": {
       "frame": {
         "x": 192,
         "y": 1984,
@@ -384,7 +384,7 @@
         "y": 0.5
       }
     },
-    "monsters/spirit/move/1.png": {
+    "monsters/spirit/move/01.png": {
       "frame": {
         "x": 256,
         "y": 1984,
@@ -408,7 +408,7 @@
         "y": 0.5
       }
     },
-    "monsters/raccoon/idle/5.png": {
+    "monsters/raccoon/idle/05.png": {
       "frame": {
         "x": 320,
         "y": 0,
@@ -432,7 +432,7 @@
         "y": 0.5
       }
     },
-    "monsters/spirit/move/2.png": {
+    "monsters/spirit/move/02.png": {
       "frame": {
         "x": 256,
         "y": 0,
@@ -456,7 +456,7 @@
         "y": 0.5
       }
     },
-    "monsters/spirit/move/3.png": {
+    "monsters/spirit/move/03.png": {
       "frame": {
         "x": 256,
         "y": 64,
@@ -480,7 +480,7 @@
         "y": 0.5
       }
     },
-    "monsters/squid/attack/0 - Copy (2).png": {
+    "monsters/squid/attack/00.png": {
       "frame": {
         "x": 256,
         "y": 128,
@@ -504,7 +504,7 @@
         "y": 0.5
       }
     },
-    "monsters/squid/idle/0.png": {
+    "monsters/squid/idle/00.png": {
       "frame": {
         "x": 256,
         "y": 192,
@@ -528,7 +528,7 @@
         "y": 0.5
       }
     },
-    "monsters/raccoon/move/0.png": {
+    "monsters/raccoon/move/00.png": {
       "frame": {
         "x": 560,
         "y": 0,
@@ -552,7 +552,7 @@
         "y": 0.5
       }
     },
-    "monsters/raccoon/move/1.png": {
+    "monsters/raccoon/move/01.png": {
       "frame": {
         "x": 800,
         "y": 0,
@@ -576,7 +576,7 @@
         "y": 0.5
       }
     },
-    "monsters/raccoon/move/2.png": {
+    "monsters/raccoon/move/02.png": {
       "frame": {
         "x": 1040,
         "y": 0,
@@ -600,7 +600,7 @@
         "y": 0.5
       }
     },
-    "monsters/raccoon/move/3.png": {
+    "monsters/raccoon/move/03.png": {
       "frame": {
         "x": 1280,
         "y": 0,
@@ -624,7 +624,7 @@
         "y": 0.5
       }
     },
-    "monsters/raccoon/move/4.png": {
+    "monsters/raccoon/move/04.png": {
       "frame": {
         "x": 1520,
         "y": 0,
@@ -648,7 +648,7 @@
         "y": 0.5
       }
     },
-    "monsters/squid/idle/1.png": {
+    "monsters/squid/idle/01.png": {
       "frame": {
         "x": 1760,
         "y": 0,
@@ -672,7 +672,7 @@
         "y": 0.5
       }
     },
-    "monsters/squid/idle/3.png": {
+    "monsters/squid/idle/03.png": {
       "frame": {
         "x": 1824,
         "y": 0,
@@ -696,7 +696,7 @@
         "y": 0.5
       }
     },
-    "monsters/bamboo/idle/0.png": {
+    "monsters/bamboo/idle/00.png": {
       "frame": {
         "x": 0,
         "y": 1920,
@@ -720,7 +720,7 @@
         "y": 0.5
       }
     },
-    "monsters/bamboo/idle/2.png": {
+    "monsters/bamboo/idle/02.png": {
       "frame": {
         "x": 0,
         "y": 1920,
@@ -744,7 +744,7 @@
         "y": 0.5
       }
     },
-    "monsters/bamboo/move/0.png": {
+    "monsters/bamboo/move/00.png": {
       "frame": {
         "x": 0,
         "y": 1920,
@@ -768,7 +768,7 @@
         "y": 0.5
       }
     },
-    "monsters/bamboo/move/2.png": {
+    "monsters/bamboo/move/02.png": {
       "frame": {
         "x": 0,
         "y": 1920,
@@ -792,7 +792,7 @@
         "y": 0.5
       }
     },
-    "monsters/bamboo/move/1.png": {
+    "monsters/bamboo/move/01.png": {
       "frame": {
         "x": 0,
         "y": 1984,
@@ -816,7 +816,7 @@
         "y": 0.5
       }
     },
-    "monsters/bamboo/move/3.png": {
+    "monsters/bamboo/move/03.png": {
       "frame": {
         "x": 64,
         "y": 1920,
@@ -840,7 +840,7 @@
         "y": 0.5
       }
     },
-    "monsters/raccoon/idle/1.png": {
+    "monsters/raccoon/idle/01.png": {
       "frame": {
         "x": 0,
         "y": 960,
@@ -864,7 +864,7 @@
         "y": 0.5
       }
     },
-    "monsters/spirit/move/0.png": {
+    "monsters/spirit/move/00.png": {
       "frame": {
         "x": 64,
         "y": 1984,
@@ -888,79 +888,7 @@
         "y": 0.5
       }
     },
-    "monsters/squid/attack/0 - Copy (3).png": {
-      "frame": {
-        "x": 256,
-        "y": 128,
-        "w": 64,
-        "h": 64
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 64,
-        "h": 64
-      },
-      "sourceSize": {
-        "w": 64,
-        "h": 64
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      }
-    },
-    "monsters/squid/attack/0 - Copy.png": {
-      "frame": {
-        "x": 256,
-        "y": 128,
-        "w": 64,
-        "h": 64
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 64,
-        "h": 64
-      },
-      "sourceSize": {
-        "w": 64,
-        "h": 64
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      }
-    },
-    "monsters/squid/attack/0.png": {
-      "frame": {
-        "x": 256,
-        "y": 128,
-        "w": 64,
-        "h": 64
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 64,
-        "h": 64
-      },
-      "sourceSize": {
-        "w": 64,
-        "h": 64
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      }
-    },
-    "monsters/squid/idle/2.png": {
+    "monsters/squid/idle/02.png": {
       "frame": {
         "x": 256,
         "y": 192,
@@ -984,7 +912,7 @@
         "y": 0.5
       }
     },
-    "monsters/squid/move/0.png": {
+    "monsters/squid/move/00.png": {
       "frame": {
         "x": 256,
         "y": 192,
@@ -1008,7 +936,7 @@
         "y": 0.5
       }
     },
-    "monsters/squid/move/1.png": {
+    "monsters/squid/move/01.png": {
       "frame": {
         "x": 1760,
         "y": 0,
@@ -1032,7 +960,7 @@
         "y": 0.5
       }
     },
-    "monsters/squid/idle/4.png": {
+    "monsters/squid/move/02.png": {
       "frame": {
         "x": 1824,
         "y": 0,
@@ -1056,31 +984,7 @@
         "y": 0.5
       }
     },
-    "monsters/squid/move/2.png": {
-      "frame": {
-        "x": 1824,
-        "y": 0,
-        "w": 64,
-        "h": 64
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 64,
-        "h": 64
-      },
-      "sourceSize": {
-        "w": 64,
-        "h": 64
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      }
-    },
-    "monsters/squid/move/3.png": {
+    "monsters/squid/move/03.png": {
       "frame": {
         "x": 1824,
         "y": 0,

@@ -13,6 +13,8 @@ use crate::{
     GameAssets,
 };
 
+#[derive(Debug, Clone, Copy, Display, PartialEq)]
+#[display(style = "snake_case")]
 pub enum AttackType {
     Slash,
     Claw,
@@ -88,6 +90,15 @@ impl Enemy {
         self.can_move = false;
     }
 
+    pub fn attack_type(&self) -> AttackType {
+        match self.ty {
+            EnemyType::Squid => AttackType::Slash,
+            EnemyType::Raccoon => AttackType::Claw,
+            EnemyType::Spirit => AttackType::Thunder,
+            EnemyType::Bamboo => AttackType::Leaf,
+        }
+    }
+
     pub fn health(&self) -> u32 {
         match self.ty {
             EnemyType::Squid => 100,
@@ -158,7 +169,7 @@ impl AnimatedEntity for Enemy {
     }
 
     fn texture_name(&self) -> String {
-        format!("monsters/{}/{}/0.png", self.ty, self.status)
+        format!("monsters/{}/{}/00.png", self.ty, self.status)
     }
 
     fn num_frames(&self) -> usize {
@@ -190,7 +201,7 @@ pub fn spawn_enemy(
 ) {
     let ty = EnemyType::from(cell);
 
-    let name = format!("monsters/{ty}/idle/0.png");
+    let name = format!("monsters/{ty}/idle/00.png");
     let handle = asset_server.load("textures/monsters.json");
 
     let pack = textures.get(&handle).expect("Texture pack must exist");
@@ -223,16 +234,19 @@ pub fn spawn_enemy(
             Velocity::zero(),
             Animation::new(ANIMATION_DURATION),
             enemy,
-            Attackable::new(health),
-            Collider::cuboid(rect.width() / 2.0, rect.height() / 2.0),
-            ENEMY_ATTACK_COLLISION_GROUP.clone(),
-            Sensor,
-            ColliderDebugColor(Color::RED),
         ))
         .with_children(|parent| {
-            // Collider for movements
+            // Collider for attacks
             parent.spawn((
                 Attackable::new(health),
+                Collider::cuboid(rect.width() / 2.0, rect.height() / 2.0),
+                ENEMY_ATTACK_COLLISION_GROUP.clone(),
+                Sensor,
+                ColliderDebugColor(Color::RED),
+            ));
+
+            // Collider for movements
+            parent.spawn((
                 Collider::cuboid(collider_width, collider_height),
                 ENEMY_MOVE_COLLISION_GROUP.clone(),
                 ColliderDebugColor(Color::DARK_GRAY),
