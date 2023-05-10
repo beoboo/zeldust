@@ -9,11 +9,12 @@ use bevy_prototype_lyon::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 use crate::constants::{CAMERA_SCALE, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE};
-use crate::events::SwitchWeapon;
+use crate::events::{PlayerPosition, SwitchWeapon};
 use crate::frames::TexturePack;
 // use crate::collisions::handle_collisions;
 use crate::map::{LayerType, WorldMap};
-use crate::player::{end_attack, handle_input, move_camera, Player, PlayerPositionEvent, render_player, spawn_player, spawn_weapon, switch_weapon, update_player_position, Weapon};
+use crate::player::{end_attack, handle_input, move_camera, Player, render_player, spawn_player, update_player_position};
+use crate::weapon::{spawn_weapon, switch_weapon, Weapon};
 
 mod constants;
 mod player;
@@ -23,6 +24,7 @@ mod ui;
 mod collisions;
 mod frames;
 mod events;
+mod weapon;
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Hash, States)]
 pub enum AppState {
@@ -131,7 +133,7 @@ fn main() {
             // handle_collisions,
         ).in_set(OnUpdate(AppState::Playing)))
         .add_system(position_tiles.in_base_set(CoreSet::PostUpdate))
-        .add_event::<PlayerPositionEvent>()
+        .add_event::<PlayerPosition>()
         .run();
 }
 
