@@ -4,9 +4,10 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::Velocity;
 use parse_display::Display;
 
-use crate::frames::TexturePack;
 pub use enemies::*;
 pub use player::*;
+
+use crate::frames::TexturePack;
 
 mod enemies;
 mod player;

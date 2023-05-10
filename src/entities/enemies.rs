@@ -4,11 +4,11 @@ use parse_display::Display;
 
 use crate::{
     constants::{ANIMATION_DURATION, ATTACK_DURATION, SPEED, TILE_SIZE},
-    entities::{render_animation, AnimatedEntity, Animation, AttackTimer, Player, Status},
+    entities::{AnimatedEntity, Animation, AttackTimer, Player, render_animation, Status},
     frames::TexturePack,
     from_position,
-    GameAssetType,
     GameAssets,
+    GameAssetType,
 };
 
 pub enum AttackType {
@@ -210,7 +210,7 @@ pub fn spawn_enemy(
                 // Collider::cuboid(rect.width() / 2.0, collider_height / 2.0),
                 // Transform::from_xyz(0.0, -offset, 0.0),
                 // ColliderDebugColor(Color::RED),
-            ));
+                ));
         });
 }
 

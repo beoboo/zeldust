@@ -3,13 +3,13 @@ use parse_display::Display;
 
 use crate::{
     constants::SWITCH_ITEM_DURATION,
-    entities::{StatType, Stats},
+    entities::{Stats, StatType},
     frames::TexturePack,
+    GameAssets,
+    GameAssetType,
     magic::Magic,
     weapon::Weapon,
     widgets::{AtlasImageBundle, UiAtlasImage},
-    GameAssetType,
-    GameAssets,
 };
 
 const MARGIN: f32 = 10.;
@@ -210,17 +210,17 @@ fn spawn_item_box(
         },
         background_color: BORDER_COLOR.into(),
         ..default()
-    },));
+    }, ));
 
     let atlas = match ty {
         ItemBoxType::Magic(_, m) => {
             commands.insert(m);
             assets.get(GameAssetType::Particles).clone()
-        },
+        }
         ItemBoxType::Weapon(_, w) => {
             commands.insert(w);
             assets.get(GameAssetType::Weapons).clone()
-        },
+        }
     };
 
     commands.with_children(|parent| {
@@ -241,7 +241,7 @@ fn spawn_item_box(
                 let mut commands = parent.spawn((AtlasImageBundle {
                     atlas_image: UiAtlasImage::new(atlas, index),
                     ..default()
-                },));
+                }, ));
 
                 match ty {
                     ItemBoxType::Magic(_, _) => commands.insert(Magic::default()),
@@ -273,7 +273,7 @@ fn spawn_experience(parent: &mut ChildBuilder, asset_server: &Res<AssetServer>) 
                         color: Color::WHITE,
                     },
                 )])
-                .with_style(Style { ..default() }),
+                    .with_style(Style { ..default() }),
             );
         });
 }

@@ -16,29 +16,16 @@ use crate::{
     camera::{move_camera, spawn_camera},
     constants::{SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE},
     entities::{
-        end_enemy_attack,
-        end_player_attack,
-        move_enemy,
-        render_enemy,
-        render_player,
-        spawn_enemy,
-        spawn_player,
-        update_depth,
-        Enemy,
-        Player,
+        end_enemy_attack, end_player_attack, Enemy, move_enemy, Player, render_enemy, render_player,
+        spawn_enemy, spawn_player, update_depth,
     },
     events::{SwitchMagic, SwitchWeapon},
     frames::TexturePack,
     input::handle_input,
-    magic::{spawn_magic, switch_magic, Magic},
+    magic::{Magic, spawn_magic, switch_magic},
     map::{LayerType, WorldMap},
     ui::{
-        change_magic_item,
-        change_weapon_item,
-        end_switch_magic,
-        end_switch_weapon,
-        spawn_ui,
-        MagicItemBox,
+        change_magic_item, change_weapon_item, end_switch_magic, end_switch_weapon, MagicItemBox, spawn_ui,
         WeaponItemBox,
     },
     weapon::{spawn_weapon, switch_weapon, Weapon},
@@ -132,7 +119,7 @@ fn main() {
         // .add_plugin(TilesetPlugin::default())
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
         .add_plugin(
-            RapierDebugRenderPlugin::default() .disabled()
+            RapierDebugRenderPlugin::default().disabled()
         )
         .add_plugin(ShapePlugin)
         .add_plugin(JsonAssetPlugin::<TexturePack>::new(&["json"]))
@@ -157,7 +144,7 @@ fn main() {
         .init_resource::<Magic>()
         .add_state::<AppState>()
         .add_systems((load_ground, load_assets, finish_loading).in_set(OnUpdate(AppState::Loading)))
-        .add_systems((prepare_assets,).in_schedule(OnExit(AppState::Loading)))
+        .add_systems((prepare_assets, ).in_schedule(OnExit(AppState::Loading)))
         .add_systems(
             (
                 // debug_tiles,
@@ -170,8 +157,7 @@ fn main() {
         )
         .add_systems(
             (
-                move_camera
-                ,
+                move_camera,
                 switch_weapon,
                 switch_magic,
                 change_magic_item,
@@ -205,10 +191,10 @@ fn load_ground(asset_server: Res<AssetServer>, mut assets: ResMut<LoadingAssets>
     match asset_server.get_load_state(handle.clone()) {
         LoadState::Loaded => {
             assets.handles.insert(handle, true);
-        },
+        }
         _ => {
             assets.handles.insert(handle, false);
-        },
+        }
     }
 }
 
@@ -221,10 +207,10 @@ fn load_assets(asset_server: Res<AssetServer>, mut assets: ResMut<LoadingAssets>
             match asset_server.get_load_state(handle.clone()) {
                 LoadState::Loaded => {
                     assets.handles.insert(handle, true);
-                },
+                }
                 _ => {
                     assets.handles.insert(handle, false);
-                },
+                }
             }
         }
     }
@@ -366,7 +352,7 @@ fn spawn_tiles(
                 match cell {
                     0..=20 => {
                         spawn_tile(&mut commands, &window, &assets, &atlases, layer_type, cell, x, y);
-                    },
+                    }
                     390..=393 => {
                         // num_enemies += 1;
                         // if num_enemies > max_enemies {
@@ -383,18 +369,18 @@ fn spawn_tiles(
                             x,
                             y,
                         );
-                    },
+                    }
                     394 => {
                         spawn_player(&mut commands, &window, &assets, x, y);
-                    },
+                    }
                     395 => {
                         spawn_block(&mut commands, &window, &asset_server, layer_type, x, y);
-                    },
+                    }
                     _ => {
                         if cell != -1 {
                             info!("Not mapped yet: {}", cell);
                         }
-                    },
+                    }
                 }
             }
         }

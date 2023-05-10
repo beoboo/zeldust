@@ -6,8 +6,8 @@ use crate::{
     entities::{Direction, Player},
     events::SwitchWeapon,
     frames::TexturePack,
-    GameAssetType,
     GameAssets,
+    GameAssetType,
 };
 
 #[derive(Component)]

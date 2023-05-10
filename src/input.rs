@@ -7,8 +7,8 @@ use crate::{
     constants::SPEED,
     entities::{Animation, AttackTimer, Direction, Player, Status},
     events::{SwitchMagic, SwitchWeapon},
-    weapon::Weapon,
     StaticCollider,
+    weapon::Weapon,
 };
 
 pub fn handle_input(
@@ -32,19 +32,19 @@ pub fn handle_input(
             KeyCode::Left => {
                 vec.x = -1.0;
                 player.direction = Direction::Left;
-            },
+            }
             KeyCode::Right => {
                 vec.x = 1.0;
                 player.direction = Direction::Right;
-            },
+            }
             KeyCode::Up => {
                 vec.y = 1.0;
                 player.direction = Direction::Up;
-            },
+            }
             KeyCode::Down => {
                 vec.y = -1.0;
                 player.direction = Direction::Down;
-            },
+            }
             _ => (),
         }
     }
@@ -63,19 +63,19 @@ pub fn handle_input(
                     Duration::from_millis(weapon.cooldown() as _),
                     TimerMode::Once,
                 )));
-            },
+            }
             KeyCode::LControl => {
                 status = Status::Attack;
                 // commands
                 //     .entity(entity)
                 //     .insert(MagicTimer(Timer::new(Duration::from_millis(weapon.cooldown() as _), TimerMode::Once)));
-            },
+            }
             KeyCode::Q => {
                 switch_weapon.send(SwitchWeapon);
-            },
+            }
             KeyCode::E => {
                 switch_magic.send(SwitchMagic);
-            },
+            }
             _ => (),
         }
     }

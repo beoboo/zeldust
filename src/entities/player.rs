@@ -3,12 +3,12 @@ use bevy_rapier2d::prelude::*;
 
 use crate::{
     constants::{ANIMATION_DURATION, TILE_SIZE},
-    entities::{render_animation, AnimatedEntity, Animation, AttackTimer, Direction, Status},
+    entities::{AnimatedEntity, Animation, AttackTimer, Direction, render_animation, Status},
     frames::TexturePack,
     from_position,
-    weapon::PlayerWeapon,
-    GameAssetType,
     GameAssets,
+    GameAssetType,
+    weapon::PlayerWeapon,
 };
 
 #[derive(Component, Reflect)]
