@@ -505,6 +505,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_common_assets"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "291aeda7599bf12869ff225c3702a8b8810c7e5d40655271d0b38442253ca03d"
+dependencies = [
+ "anyhow",
+ "bevy 0.10.1",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "bevy_core"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5212,11 +5224,15 @@ checksum = "d2d7d3948613f75c98fd9328cfdcc45acc4d360655289d0a7d4ec931392200a3"
 name = "zelda"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "bevy 0.10.1",
  "bevy-inspector-egui",
+ "bevy_common_assets",
  "bevy_prototype_lyon",
  "bevy_rapier2d",
  "bevy_tileset",
  "csv",
  "rand",
+ "serde",
+ "serde_json",
 ]

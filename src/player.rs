@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy_rapier2d::prelude::*;
 
-use crate::{from_position, from_translation, GameAssets, Layer, MapSize, Position, Size, StaticCollider};
+use crate::{from_position, from_translation, GameAssets, MapSize, Position, Size, StaticCollider};
 
 #[derive(Component, Reflect)]
 pub struct Player {
@@ -45,12 +45,13 @@ pub enum Direction {
 pub struct PlayerPositionEvent(Position);
 
 pub fn spawn_player(
-    commands: &mut Commands,
-    window: &Window,
-    assets: &Res<GameAssets>,
-    map_size: &Res<MapSize>,
+    mut commands: Commands,
+    window: Query<&Window, With<PrimaryWindow>>,
+    assets: Res<GameAssets>,
+    map_size: Res<MapSize>,
 ) {
     // println!("spawn player");
+    let Ok(window) = window.get_single() else { return; };
 
     let (x, y) = (map_size.width as f32 / 2., map_size.height as f32 / 2.);
     let position = Position { x, y };
@@ -65,7 +66,6 @@ pub fn spawn_player(
             ..Default::default()
         },
         position,
-        Layer(1),
         Player::default(),
         RigidBody::Dynamic,
         GravityScale(0.0),
@@ -78,7 +78,7 @@ pub fn spawn_player(
         parent.spawn((
             Collider::cuboid(32.0, 16.0),
             Transform::from_xyz(0.0, -16.0, 0.0),
-            ColliderDebugColor(Color::YELLOW_GREEN),
+            ColliderDebugColor(Color::RED),
         ));
     });
 }
@@ -134,18 +134,6 @@ pub fn move_camera(
         let mut camera_position = query.single_mut();
         *camera_position = player_position.0;
     }
-}
-
-pub fn move_player(
-    mut query: Query<(&mut Position, &Player, &Velocity), With<Player>>,
-    mut position_writer: EventWriter<PlayerPositionEvent>,
-) {
-    let (mut position, player, velocity) = query.single_mut();
-
-    position.x += player.speed * velocity.linvel.x;
-    position.y += player.speed * velocity.linvel.y;
-
-    position_writer.send(PlayerPositionEvent(*position));
 }
 
 pub fn update_player_position(
