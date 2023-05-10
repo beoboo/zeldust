@@ -11,9 +11,7 @@ use enum_iterator::{all, Sequence};
 use parse_display::Display;
 
 use crate::constants::{CAMERA_SCALE, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE};
-use crate::entities::{
-    end_attack, move_camera, render_player, spawn_player, update_player_position, Player,
-};
+use crate::entities::{end_attack, move_camera, render_player, spawn_player, update_depth, Player};
 use crate::entities::{move_enemy, render_enemy, spawn_enemy, Enemy};
 use crate::events::{SwitchMagic, SwitchWeapon};
 use crate::frames::TexturePack;
@@ -152,7 +150,6 @@ fn main() {
         .add_systems(
             (
                 handle_input,
-                update_player_position,
                 move_camera,
                 render_player,
                 spawn_weapon,
@@ -166,6 +163,7 @@ fn main() {
                 end_switch_weapon,
                 move_enemy,
                 render_enemy,
+                update_depth,
                 // handle_collisions,
             )
                 .in_set(OnUpdate(AppState::Playing)),
@@ -348,6 +346,8 @@ fn spawn_tiles(
     textures: Res<Assets<TexturePack>>,
 ) {
     let window = window.single();
+    // let max_enemies = 1;
+    // let mut num_enemies = 0;
 
     // Spawn the world
     for (layer_type, layer) in world_map.layers.iter() {
@@ -370,6 +370,10 @@ fn spawn_tiles(
                         );
                     }
                     390..=393 => {
+                        // num_enemies += 1;
+                        // if num_enemies > max_enemies {
+                        //     continue;
+                        // }
                         spawn_enemy(
                             &mut commands,
                             &window,
@@ -473,25 +477,3 @@ pub fn from_position(x: f32, y: f32, window: &Window) -> Vec3 {
         convert(y, window.height()) + 1000.0,
     )
 }
-//
-// pub fn from_translation(translation: Vec3, window: &Window) -> Position {
-//     fn convert(pos: f32, bound_dim: f32) -> f32 {
-//         pos - (bound_dim / 2.)
-//     }
-//
-//     Position {
-//         x: convert(translation.x, -window.width()),
-//         y: -convert(translation.y, window.height()),
-//     }
-// }
-//
-// fn position_tiles(
-//     window: Query<&Window, With<PrimaryWindow>>,
-//     mut q: Query<(&Position, &mut Transform), (Changed<Position>, Without<Player>)>,
-// ) {
-//     let Ok(window) = window.get_single() else { return; };
-//
-//     for (pos, mut transform) in q.iter_mut() {
-//         transform.translation = from_position(pos, window);
-//     }
-// }

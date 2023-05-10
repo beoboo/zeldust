@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy::utils::HashMap;
 use bevy_rapier2d::prelude::*;
 
-use crate::constants::TILE_SIZE;
+use crate::constants::{ANIMATION_DURATION, TILE_SIZE};
 use crate::entities::{Direction, Status};
 use crate::frames::TexturePack;
 use crate::weapon::PlayerWeapon;
@@ -22,6 +22,7 @@ pub struct Player {
     pub status: Status,
     pub direction: Direction,
     pub is_attacking: bool,
+    pub frame: usize,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -83,6 +84,7 @@ impl Default for Player {
             status: Status::Idle,
             direction: Direction::Down,
             is_attacking: false,
+            frame: 0,
         }
     }
 }
@@ -109,7 +111,7 @@ pub fn spawn_player(
             ActiveEvents::COLLISION_EVENTS,
             Velocity::zero(),
             Stats::default(),
-            AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
+            AnimationTimer(Timer::new(ANIMATION_DURATION, TimerMode::Repeating)),
         ))
         .with_children(|parent| {
             parent.spawn((
@@ -118,14 +120,6 @@ pub fn spawn_player(
                 ColliderDebugColor(Color::RED),
             ));
         });
-}
-
-pub fn update_player_position(mut query: Query<(&mut Transform, Ref<Velocity>), With<Player>>) {
-    let (mut transform, previous) = query.single_mut();
-
-    if previous.is_changed() {
-        transform.translation.z = -transform.translation.y + 1000.0;
-    }
 }
 
 pub fn move_camera(
@@ -139,11 +133,11 @@ pub fn move_camera(
 
 pub fn render_player(
     time: Res<Time>,
-    mut query: Query<(&Player, &mut AnimationTimer, &mut TextureAtlasSprite)>,
+    mut query: Query<(&mut Player, &mut AnimationTimer, &mut TextureAtlasSprite)>,
     asset_server: Res<AssetServer>,
     textures: Res<Assets<TexturePack>>,
 ) {
-    let (player, mut timer, mut sprite) = query.single_mut();
+    let (mut player, mut timer, mut sprite) = query.single_mut();
 
     let direction = player.direction;
     let mut status = player.status.to_string();
@@ -166,15 +160,14 @@ pub fn render_player(
     if !player.is_attacking && player.status == Status::Move {
         if timer.0.paused() {
             sprite.index = index;
-            timer.0.set_duration(Duration::from_secs_f32(0.1));
+            player.frame = 0;
             timer.0.reset();
             timer.0.unpause();
         } else {
             timer.0.tick(time.delta());
             if timer.0.just_finished() {
-                let mut current = sprite.index;
-                current = (current + 1) % 4;
-                sprite.index = index + current;
+                player.frame = (player.frame + 1) % 4;
+                sprite.index = index + player.frame;
             }
         }
     } else {

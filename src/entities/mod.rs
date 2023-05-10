@@ -1,6 +1,7 @@
 use std::f32::consts::FRAC_PI_4;
 
 use bevy::prelude::*;
+use bevy_rapier2d::prelude::Velocity;
 use parse_display::Display;
 
 pub use enemies::*;
@@ -37,6 +38,14 @@ impl From<Vec2> for Direction {
             Direction::Right
         } else {
             Direction::Down
+        }
+    }
+}
+
+pub fn update_depth(mut query: Query<(&mut Transform, Ref<Velocity>)>) {
+    for (mut transform, previous) in query.iter_mut() {
+        if previous.is_changed() {
+            transform.translation.z = -transform.translation.y + 1000.0;
         }
     }
 }

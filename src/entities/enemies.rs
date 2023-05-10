@@ -1,3 +1,4 @@
+use bevy::log;
 use std::time::Duration;
 
 use bevy::math::Vec3Swizzles;
@@ -5,7 +6,7 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use parse_display::Display;
 
-use crate::constants::{FPS, TILE_SIZE};
+use crate::constants::{ANIMATION_DURATION, FPS, TILE_SIZE};
 use crate::entities::Status;
 use crate::entities::{AnimationTimer, Player};
 use crate::frames::TexturePack;
@@ -55,6 +56,7 @@ pub struct Enemy {
     ty: EnemyType,
     status: Status,
     is_attacking: bool,
+    frame: usize,
 }
 
 impl Enemy {
@@ -63,6 +65,7 @@ impl Enemy {
             ty,
             status: Status::Idle,
             is_attacking: false,
+            frame: 0,
         }
     }
 
@@ -158,6 +161,9 @@ pub fn spawn_enemy(
 
     let collider_height = TILE_SIZE / 2.0;
 
+    let mut timer = AnimationTimer(Timer::new(ANIMATION_DURATION, TimerMode::Repeating));
+    timer.0.pause();
+
     commands
         .spawn((
             SpriteSheetBundle {
@@ -171,7 +177,7 @@ pub fn spawn_enemy(
             LockedAxes::ROTATION_LOCKED,
             ActiveEvents::COLLISION_EVENTS,
             Velocity::zero(),
-            AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
+            timer,
             Enemy::new(ty),
         ))
         .with_children(|parent| {
@@ -194,48 +200,54 @@ pub fn move_enemy(
         let distance = diff.length();
         let direction = diff.xy().normalize_or_zero() * enemy.speed() * FPS;
 
+        // println!("{distance}");
+
         if distance < enemy.attack_radius() {
             velocity.linvel = direction.into();
             enemy.is_attacking = true;
         } else if distance < enemy.notice_radius() {
             velocity.linvel = direction.into();
             enemy.is_attacking = false;
+            enemy.status = Status::Move;
         } else {
             velocity.linvel = Vec2::ZERO;
             enemy.is_attacking = false;
+            enemy.status = Status::Idle;
         }
     }
 }
 
 pub fn render_enemy(
     time: Res<Time>,
-    mut query: Query<(&Enemy, &mut AnimationTimer, &mut TextureAtlasSprite)>,
+    mut query: Query<(&mut Enemy, &mut AnimationTimer, &mut TextureAtlasSprite)>,
     asset_server: Res<AssetServer>,
     textures: Res<Assets<TexturePack>>,
 ) {
-    for (enemy, mut timer, mut sprite) in query.iter_mut() {
-        let mut status = enemy.status.to_string();
+    for (mut enemy, mut timer, mut sprite) in query.iter_mut() {
+        let status = enemy.status.to_string();
 
         let name = format!("monsters/{}/{status}/0.png", enemy.ty);
         let handle = asset_server.load("textures/monsters.json");
         let pack = textures.get(&handle).expect("Texture pack must exist");
-        let index = pack.index_of(&name);
+        let mut index = pack.index_of(&name);
 
         if !enemy.is_attacking {
             if timer.0.paused() {
-                sprite.index = index;
-                timer.0.set_duration(Duration::from_secs_f32(0.1));
+                log::info!("Unpausing enemy {enemy:?}");
                 timer.0.reset();
                 timer.0.unpause();
+                sprite.index = index;
+                enemy.frame = 0;
             } else {
                 timer.0.tick(time.delta());
+
                 if timer.0.just_finished() {
-                    let mut current = sprite.index;
-                    current = (current + 1) % 4;
-                    sprite.index = index + current;
+                    enemy.frame = (enemy.frame + 1) % 4;
+                    sprite.index = index + enemy.frame;
                 }
             }
         } else {
+            timer.pause();
             sprite.index = index;
         }
     }
