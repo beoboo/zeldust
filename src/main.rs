@@ -8,19 +8,19 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_prototype_lyon::prelude::*;
 use bevy_rapier2d::prelude::*;
 
+use crate::frames::TexturePack;
 // use crate::collisions::handle_collisions;
 use crate::map::{LayerType, WorldMap};
-use crate::player::{animate_player, handle_input, move_camera, Player, PlayerPositionEvent, spawn_player, update_player_position};
-use crate::settings::{CAMERA_SCALE, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE};
-use crate::tiles::TileSet;
+use crate::player::{render_player, end_attack, handle_input, move_camera, Player, PlayerPositionEvent, spawn_player, update_player_position};
+use crate::constants::{CAMERA_SCALE, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE};
 
-mod settings;
+mod constants;
 mod player;
 mod map;
 mod layer;
 mod ui;
 mod collisions;
-mod tiles;
+mod frames;
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Hash, States)]
 pub enum AppState {
@@ -88,16 +88,16 @@ fn main() {
         // .add_plugin(TilesetPlugin::default())
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
         .add_plugin(RapierDebugRenderPlugin::default()
-                    // .disabled()
+            .disabled()
         )
         .add_plugin(ShapePlugin)
-        .add_plugin(JsonAssetPlugin::<TileSet>::new(&["json"]))
+        .add_plugin(JsonAssetPlugin::<TexturePack>::new(&["json"]))
         .register_type::<Position>()
         .register_type::<Player>()
         .insert_resource(ClearColor(Color::rgb(0.04, 0.04, 0.04)))
         .insert_resource(
             WorldMap::new()
-                // .load_layer(LayerType::Blocks, "assets/map/map_FloorBlocks.csv")
+                .load_layer(LayerType::Blocks, "assets/map/map_FloorBlocks.csv")
                 .load_layer(LayerType::Grass, "assets/map/map_Grass.csv")
                 .load_layer(LayerType::Objects, "assets/map/map_Objects.csv")
         )
@@ -119,7 +119,8 @@ fn main() {
             handle_input,
             update_player_position,
             move_camera,
-            animate_player,
+            render_player,
+            end_attack,
             // handle_collisions,
         ).in_set(OnUpdate(AppState::Playing)))
         .add_system(position_tiles.in_base_set(CoreSet::PostUpdate))
@@ -147,9 +148,9 @@ fn load_assets(
     asset_server: Res<AssetServer>,
     mut assets: ResMut<LoadingAssets>,
 ) {
-    for ty in vec!["objects"] {
+    for ty in vec!["player", "objects"] {
         for asset in vec!["json", "png"] {
-            let path = format!("tiles/{ty}.{asset}");
+            let path = format!("textures/{ty}.{asset}");
             let handle = asset_server.load_untyped(path);
 
             match asset_server.get_load_state(handle.clone()) {
@@ -185,7 +186,7 @@ fn prepare_assets(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut images: ResMut<Assets<Image>>,
-    tiles_data: Res<Assets<TileSet>>,
+    tiles_data: Res<Assets<TexturePack>>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
     let handle = asset_server.load("map/ground.png");
@@ -202,12 +203,7 @@ fn prepare_assets(
 
     commands.insert_resource(size);
 
-
-    let texture_handle = asset_server.load("images/player.png");
-    let texture_atlas =
-        TextureAtlas::from_grid(texture_handle, Vec2::new(64.0, 64.0), 24, 1, None, None);
-
-    let player_handle = texture_atlases.add(texture_atlas);
+    let player_atlas_handle = build_texture_atlas("player", &asset_server, &mut images, &mut texture_atlases, &tiles_data);
 
     let mut layers = HashMap::new();
 
@@ -216,36 +212,38 @@ fn prepare_assets(
         TextureAtlas::from_grid(texture_handle, Vec2::new(64.0, 64.0), 24, 1, None, None);
     layers.insert(LayerType::Grass, texture_atlases.add(texture_atlas));
 
+    let texture_atlas_handle = build_texture_atlas("objects", &asset_server, &mut images, &mut texture_atlases, &tiles_data);
 
-    let handle = asset_server.load("tiles/objects.json");
-    let tile_set = tiles_data.get(&handle).expect("Tile set not loaded");
+    layers.insert(LayerType::Objects, texture_atlas_handle);
 
-    println!("{tile_set:?}");
+    let assets = GameAssets {
+        player: player_atlas_handle,
+        layers,
+    };
 
-    let image_handle = asset_server.load("tiles/objects.png");
-    let image = images.get(&image_handle).expect("Image not loaded");
+    commands.insert_resource(assets);
+}
 
-    let mut atlas = TextureAtlas::new_empty(image_handle, image.size());
+fn build_texture_atlas(ty: &str, asset_server: &Res<AssetServer>, images: &mut ResMut<Assets<Image>>, texture_atlases: &mut ResMut<Assets<TextureAtlas>>, textures: &Res<Assets<TexturePack>>) -> Handle<TextureAtlas> {
+    let path = format!("textures/{ty}");
 
-    for (id, tile) in &tile_set.frames {
-        if id == "14.png" {
-            println!("{tile:?}");
-        }
+    let handle = asset_server.load(format!("{path}.json"));
+    let pack = textures.get(&handle).expect("Texture pack not loaded");
+
+    println!("{pack:?}");
+
+    let handle = asset_server.load(format!("{path}.png"));
+    let image = images.get(&handle).expect("Image not loaded");
+
+    let mut atlas = TextureAtlas::new_empty(handle, image.size());
+
+    for (_, tile) in &pack.frames {
         let frame = &tile.frame;
         let rect = Rect::new(frame.x, frame.y, frame.x + frame.w, frame.y + frame.h);
         atlas.add_texture(rect);
     }
 
-    let texture_atlas_handle = texture_atlases.add(atlas);
-
-    layers.insert(LayerType::Objects, texture_atlas_handle);
-
-    let assets = GameAssets {
-        player: player_handle,
-        layers,
-    };
-
-    commands.insert_resource(assets);
+    texture_atlases.add(atlas)
 }
 
 fn spawn_ground(
@@ -390,12 +388,11 @@ fn spawn_tiles(
                     }
                     _ => {
                         if cell != -1 {
-                            info!("Ignoring: {}", cell);
+                            info!("Not mapped yet: {}", cell);
                         }
                     }
                 }
             }
-            // println!();
         }
     }
 }
