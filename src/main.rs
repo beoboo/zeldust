@@ -110,9 +110,10 @@ fn main() {
         .add_event::<PlayerPositionChanged>()
         .insert_resource(ClearColor(Color::rgb(0.04, 0.04, 0.04)))
         .insert_resource(
-            WorldMap::new(), // .load_layer(LayerType::Blocks, "assets/map/map_FloorBlocks.csv")
-                             // .load_layer(LayerType::Grass, "assets/map/map_Grass.csv")
-                             // .load_layer(LayerType::Objects, "assets/map/map_Objects.csv"),
+            WorldMap::new()
+                .load_layer(LayerType::Blocks, "assets/map/map_FloorBlocks.csv")
+                .load_layer(LayerType::Grass, "assets/map/map_Grass.csv")
+                .load_layer(LayerType::Objects, "assets/map/map_Objects.csv"),
         )
         .init_resource::<LoadingAssets>()
         .init_resource::<Weapon>()
@@ -321,24 +322,24 @@ fn spawn_cameras(mut commands: Commands, map_size: Res<MapSize>) {
 
     commands.spawn((camera, Position { x, y }));
 }
-
-fn debug_tiles(
-    mut commands: Commands,
-    assets: Res<GameAssets>,
-    atlases: Res<Assets<TextureAtlas>>,
-) {
-    let handle = &assets.layers[&LayerType::Objects];
-    let atlas = atlases.get(&handle).unwrap();
-
-    for (id, texture) in atlas.textures.iter().enumerate() {
-        commands.spawn((SpriteSheetBundle {
-            sprite: TextureAtlasSprite::new(id),
-            texture_atlas: handle.clone(),
-            transform: Transform::from_translation(texture.center().extend(0.0)),
-            ..Default::default()
-        },));
-    }
-}
+//
+// fn debug_tiles(
+//     mut commands: Commands,
+//     assets: Res<GameAssets>,
+//     atlases: Res<Assets<TextureAtlas>>,
+// ) {
+//     let handle = &assets.layers[&LayerType::Objects];
+//     let atlas = atlases.get(&handle).unwrap();
+//
+//     for (id, texture) in atlas.textures.iter().enumerate() {
+//         commands.spawn((SpriteSheetBundle {
+//             sprite: TextureAtlasSprite::new(id),
+//             texture_atlas: handle.clone(),
+//             transform: Transform::from_translation(texture.center().extend(0.0)),
+//             ..Default::default()
+//         },));
+//     }
+// }
 
 fn spawn_tiles(
     mut commands: Commands,
@@ -351,13 +352,6 @@ fn spawn_tiles(
     for (layer_type, layer) in world_map.layers.iter() {
         for (row_idx, row) in layer.data.iter().enumerate() {
             for (col_idx, &cell) in row.iter().enumerate() {
-                // if cell != 14 && cell != 395 {
-                //     continue;
-                // }
-                // if cell != -1 {
-                //     info!("{layer_type:?}: {cell}");
-                // }
-
                 match cell {
                     0..=20 => {
                         let index = layer_type.to_index(cell as usize);
@@ -369,10 +363,6 @@ fn spawn_tiles(
 
                         let x = (col_idx as f32 + 0.5) * TILE_SIZE;
                         let y = (row_idx as f32 + 0.5) * TILE_SIZE - offset;
-                        //
-                        // if cell == 14 {
-                        //     info!("{col_idx}, {row_idx}, {x}, {y}, {index}");
-                        // }
 
                         let collider_height = TILE_SIZE / 2.0;
 
@@ -390,7 +380,6 @@ fn spawn_tiles(
                             ))
                             .with_children(|parent| {
                                 parent.spawn((
-                                    // Restitution::coefficient(0.1),
                                     Collider::cuboid(image.width() / 2.0, collider_height / 2.0),
                                     Transform::from_xyz(0.0, -offset, 0.0),
                                     ColliderDebugColor(Color::ALICE_BLUE),
@@ -403,10 +392,6 @@ fn spawn_tiles(
 
                         commands.spawn((
                             SpriteBundle {
-                                // sprite: Sprite {
-                                //     color: Color::BLACK,
-                                //     ..default()
-                                // },
                                 texture: asset_server.load("test/rock.png"),
                                 ..Default::default()
                             },

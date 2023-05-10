@@ -58,19 +58,17 @@ pub fn spawn_ui(
 
     // Bottom content
     commands
-        .spawn(
-            NodeBundle {
-                style: Style {
-                    size: Size::new(Val::Percent(100.), Val::Percent(100.)),
-                    padding: UiRect::all(Val::Px(MARGIN)),
-                    flex_direction: FlexDirection::Column,
-                    justify_content: JustifyContent::End,
-                    position_type: PositionType::Absolute,
-                    ..default()
-                },
+        .spawn(NodeBundle {
+            style: Style {
+                size: Size::new(Val::Percent(100.), Val::Percent(100.)),
+                padding: UiRect::all(Val::Px(MARGIN)),
+                flex_direction: FlexDirection::Column,
+                justify_content: JustifyContent::End,
+                position_type: PositionType::Absolute,
                 ..default()
             },
-        )
+            ..default()
+        })
         .with_children(|parent| {
             parent
                 .spawn(NodeBundle {
@@ -149,11 +147,7 @@ fn spawn_item_box(
         .with_children(|parent| {
             parent.spawn((
                 AtlasImageBundle {
-                    atlas_image: UiAtlasImage {
-                        atlas: assets.weapons.clone(),
-                        index,
-                        ..default()
-                    },
+                    atlas_image: UiAtlasImage::new(assets.weapons.clone(), index),
                     ..default()
                 },
                 Weapon::default(),

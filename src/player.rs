@@ -9,7 +9,7 @@ use parse_display::Display;
 use crate::constants::ATTACK_DURATION;
 use crate::events::{PlayerPositionChanged, SwitchWeapon};
 use crate::frames::TexturePack;
-use crate::weapon::Weapon;
+use crate::weapon::PlayerWeapon;
 use crate::{from_position, from_translation, GameAssets, MapSize, Position, Size, StaticCollider};
 
 #[derive(Component, Deref)]
@@ -286,7 +286,7 @@ pub fn end_attack(
     mut commands: Commands,
     time: Res<Time>,
     mut player_q: Query<(Entity, &mut Player, &mut AttackTimer)>,
-    weapon_q: Query<Entity, With<Weapon>>,
+    weapon_q: Query<Entity, With<PlayerWeapon>>,
 ) {
     for (entity, mut player, mut timer) in player_q.iter_mut() {
         timer.0.tick(time.delta());
@@ -294,9 +294,10 @@ pub fn end_attack(
         if timer.0.finished() {
             player.is_attacking = false;
             commands.entity(entity).remove::<AttackTimer>();
-            let weapon = weapon_q.single();
 
-            commands.entity(weapon).despawn();
+            if let Ok(weapon) = weapon_q.get_single() {
+                commands.entity(weapon).despawn();
+            };
         }
     }
 }
