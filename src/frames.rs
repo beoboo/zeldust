@@ -1,11 +1,12 @@
 use std::collections::BTreeMap;
+
 use bevy::reflect::TypeUuid;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, TypeUuid)]
 #[uuid = "1c363550-1333-4889-8145-2633d881c243"]
 pub struct TexturePack {
-    pub frames: BTreeMap<String, TextureFrame>
+    pub frames: BTreeMap<String, TextureFrame>,
 }
 
 impl TexturePack {
@@ -22,7 +23,7 @@ impl TexturePack {
 
 #[derive(Debug, Deserialize)]
 pub struct TextureFrame {
-    pub frame: Frame
+    pub frame: Frame,
 }
 
 #[derive(Debug, Deserialize)]
@@ -36,6 +37,7 @@ pub struct Frame {
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
+
     use super::*;
 
     #[test]

@@ -25,6 +25,26 @@ pub struct Player {
     pub is_attacking: bool,
 }
 
+pub struct PlayerStats {
+    health: u32,
+    energy: u32,
+    attack: u32,
+    magic: u32,
+    speed: u32,
+}
+
+impl Default for PlayerStats {
+    fn default() -> Self {
+        Self {
+            health: 100,
+            energy: 60,
+            attack: 10,
+            magic: 4,
+            speed: 4,
+        }
+    }
+}
+
 impl Default for Player {
     fn default() -> Self {
         Self {
@@ -67,35 +87,40 @@ pub fn spawn_player(
 
     let translation = from_position(&position, window);
 
-    commands.spawn((
-        SpriteSheetBundle {
-            sprite: TextureAtlasSprite::new(4),
-            texture_atlas: assets.player.clone(),
-            transform: Transform::from_translation(translation),
-            ..Default::default()
-        },
-        position,
-        Player::default(),
-        RigidBody::Dynamic,
-        GravityScale(0.0),
-        LockedAxes::ROTATION_LOCKED,
-        ActiveEvents::COLLISION_EVENTS,
-        Velocity::zero(),
-        AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
-        Size::default(),
-    )).with_children(|parent| {
-        parent.spawn((
-            Collider::cuboid(32.0, 16.0),
-            Transform::from_xyz(0.0, -16.0, 0.0),
-            ColliderDebugColor(Color::RED),
-        ));
-    });
+    commands
+        .spawn((
+            SpriteSheetBundle {
+                sprite: TextureAtlasSprite::new(4),
+                texture_atlas: assets.player.clone(),
+                transform: Transform::from_translation(translation),
+                ..Default::default()
+            },
+            position,
+            Player::default(),
+            RigidBody::Dynamic,
+            GravityScale(0.0),
+            LockedAxes::ROTATION_LOCKED,
+            ActiveEvents::COLLISION_EVENTS,
+            Velocity::zero(),
+            AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
+            Size::default(),
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                Collider::cuboid(32.0, 16.0),
+                Transform::from_xyz(0.0, -16.0, 0.0),
+                ColliderDebugColor(Color::RED),
+            ));
+        });
 }
 
 pub fn handle_input(
     mut commands: Commands,
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<(Entity, &mut Player, &mut Velocity, &mut AnimationTimer), Without<StaticCollider>>,
+    mut query: Query<
+        (Entity, &mut Player, &mut Velocity, &mut AnimationTimer),
+        Without<StaticCollider>,
+    >,
     mut switch_weapon: EventWriter<SwitchWeapon>,
 ) {
     let mut vec = Vec2::default();
@@ -124,7 +149,7 @@ pub fn handle_input(
                 vec.y = -1.0;
                 player.direction = Direction::Down;
             }
-            _ => ()
+            _ => (),
         }
     }
 
@@ -132,12 +157,14 @@ pub fn handle_input(
         match key {
             KeyCode::Space | KeyCode::LControl => {
                 player.is_attacking = true;
-                commands.entity(entity).insert(AttackTimer(Timer::new(ATTACK_DURATION, TimerMode::Once)));
+                commands
+                    .entity(entity)
+                    .insert(AttackTimer(Timer::new(ATTACK_DURATION, TimerMode::Once)));
             }
             KeyCode::Q => {
                 switch_weapon.send(SwitchWeapon);
             }
-            _ => ()
+            _ => (),
         }
     }
 

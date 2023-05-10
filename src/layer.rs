@@ -1,7 +1,7 @@
 use std::fs::File;
 
 pub struct Layer {
-    pub data: Vec<Vec<i32>>
+    pub data: Vec<Vec<i32>>,
 }
 
 impl Layer {
