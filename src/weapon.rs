@@ -1,14 +1,17 @@
+use std::time::Duration;
+
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::{ActiveEvents, Collider};
 use parse_display::Display;
 
 use crate::{
+    collisions::WEAPON_COLLISION_GROUP,
     constants::TILE_SIZE,
     entities::{Direction, Player},
     events::SwitchWeapon,
     frames::TexturePack,
-    GameAssets,
     GameAssetType,
+    GameAssets,
 };
 
 #[derive(Component)]
@@ -26,14 +29,16 @@ pub enum Weapon {
 }
 
 impl Weapon {
-    pub fn cooldown(&self) -> u32 {
-        match self {
+    pub fn cooldown(&self) -> Duration {
+        let ms = match self {
             Weapon::Axe => 300,
             Weapon::Lance => 400,
             Weapon::Rapier => 50,
             Weapon::Sai => 80,
             Weapon::Sword => 100,
-        }
+        };
+
+        Duration::from_millis(ms)
     }
 
     pub fn damage(&self) -> u32 {
@@ -116,6 +121,7 @@ pub fn spawn_weapon(
             PlayerWeapon,
             ActiveEvents::COLLISION_EVENTS,
             Collider::cuboid(frame.frame.w / 2.0, frame.frame.h / 2.0),
+            WEAPON_COLLISION_GROUP.clone(),
         ));
     });
 }

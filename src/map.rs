@@ -1,7 +1,7 @@
+use crate::debug::VALID_LAYERS;
 use bevy::prelude::*;
 use bevy_rapier2d::parry::utils::hashmap::HashMap;
 use rand::Rng;
-use crate::debug::VALID_LAYERS;
 
 use crate::layer::Layer;
 
@@ -19,7 +19,7 @@ impl LayerType {
             LayerType::Grass => {
                 let mut rng = rand::thread_rng();
                 rng.gen_range(0..3)
-            }
+            },
             _ => index,
         }
     }

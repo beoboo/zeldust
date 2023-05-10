@@ -12,14 +12,24 @@ use bevy_rapier2d::prelude::*;
 use enum_iterator::{all, Sequence};
 use parse_display::Display;
 
-use crate::collisions::handle_weapon_collisions;
-use crate::entities::Attackable;
 use crate::{
     camera::{move_camera, spawn_camera},
+    collisions::{handle_weapon_collisions, OBJECTS_COLLISION_GROUP},
     constants::{SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE},
+    debug::{can_spawn, DEBUG_PHYSICS, MAX_ENEMIES, MAX_TILES},
     entities::{
-        end_enemy_attack, end_player_attack, move_enemy, render_enemy, render_player, spawn_enemy, spawn_player,
-        update_depth, Enemy, Player,
+        end_enemy_attack,
+        end_enemy_hit,
+        end_player_attack,
+        move_enemy,
+        render_enemy,
+        render_player,
+        spawn_enemy,
+        spawn_player,
+        update_depth,
+        Attackable,
+        Enemy,
+        Player,
     },
     events::{SwitchMagic, SwitchWeapon},
     frames::TexturePack,
@@ -27,13 +37,17 @@ use crate::{
     magic::{spawn_magic, switch_magic, Magic},
     map::{LayerType, WorldMap},
     ui::{
-        change_magic_item, change_weapon_item, end_switch_magic, end_switch_weapon, spawn_ui, MagicItemBox,
+        change_magic_item,
+        change_weapon_item,
+        end_switch_magic,
+        end_switch_weapon,
+        spawn_ui,
+        MagicItemBox,
         WeaponItemBox,
     },
     weapon::{spawn_weapon, switch_weapon, Weapon},
     widgets::WidgetsPlugin,
 };
-use crate::debug::{can_spawn, MAX_ENEMIES, MAX_TILES};
 
 mod camera;
 mod collisions;
@@ -110,8 +124,9 @@ pub struct LoadingAssets {
 }
 
 fn main() {
-    App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
+    let mut app = App::new();
+
+    app.add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Zeldust".to_string(),
                 resolution: WindowResolution::new(SCREEN_WIDTH as f32, SCREEN_HEIGHT as f32),
@@ -122,9 +137,6 @@ fn main() {
         .add_plugin(WorldInspectorPlugin::default())
         // .add_plugin(TilesetPlugin::default())
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
-        .add_plugin(
-            RapierDebugRenderPlugin::default().disabled()
-        )
         .add_plugin(ShapePlugin)
         .add_plugin(JsonAssetPlugin::<TexturePack>::new(&["json"]))
         .add_plugin(WidgetsPlugin)
@@ -174,19 +186,25 @@ fn main() {
         .add_systems(
             (
                 handle_input,
-                render_player,
                 spawn_weapon,
                 spawn_magic,
-                end_player_attack,
                 end_enemy_attack,
+                end_enemy_hit,
+                end_player_attack,
                 move_enemy,
+                render_player,
                 render_enemy,
                 update_depth,
                 handle_weapon_collisions,
             )
                 .in_set(OnUpdate(AppState::Playing)),
-        )
-        .run();
+        );
+
+    if DEBUG_PHYSICS {
+        app.add_plugin(RapierDebugRenderPlugin::default());
+    }
+
+    app.run();
 }
 
 fn load_ground(asset_server: Res<AssetServer>, mut assets: ResMut<LoadingAssets>) {
@@ -433,7 +451,7 @@ fn spawn_tile(
         ));
 
         if layer_type.is_attackable() {
-            child.insert(Attackable::new(1));
+            child.insert((Attackable::new(1), OBJECTS_COLLISION_GROUP.clone()));
         }
     });
 }

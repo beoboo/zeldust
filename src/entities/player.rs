@@ -1,14 +1,16 @@
 use bevy::{prelude::*, utils::HashMap};
 use bevy_rapier2d::prelude::*;
+use std::time::Duration;
 
 use crate::{
-    constants::{ANIMATION_DURATION, TILE_SIZE},
-    entities::{AnimatedEntity, Animation, AttackTimer, Direction, render_animation, Status},
+    collisions::PLAYER_MOVE_COLLISION_GROUP,
+    constants::{ANIMATION_DURATION, ATTACK_DURATION, TILE_SIZE},
+    entities::{render_animation, AnimatedEntity, Animation, AttackTimer, Direction, Status},
     frames::TexturePack,
     from_position,
-    GameAssets,
-    GameAssetType,
     weapon::PlayerWeapon,
+    GameAssetType,
+    GameAssets,
 };
 
 #[derive(Component, Reflect)]
@@ -31,6 +33,10 @@ impl Default for Player {
 }
 
 impl Player {
+    pub fn attack_cooldown(&self) -> Duration {
+        ATTACK_DURATION
+    }
+
     pub fn damage(&self) -> u32 {
         10
     }
@@ -136,6 +142,7 @@ pub fn spawn_player(commands: &mut Commands, window: &Window, assets: &Res<GameA
                 Collider::cuboid(TILE_SIZE / 2.0, TILE_SIZE / 4.0),
                 Transform::from_xyz(0.0, -TILE_SIZE / 4.0, 0.0),
                 ColliderDebugColor(Color::RED),
+                PLAYER_MOVE_COLLISION_GROUP.clone(),
             ));
         });
 }

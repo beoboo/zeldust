@@ -15,6 +15,9 @@ mod player;
 #[derive(Component, Deref, DerefMut)]
 pub struct AttackTimer(pub Timer);
 
+#[derive(Component, Deref, DerefMut)]
+pub struct HitTimer(pub Timer);
+
 #[derive(Component)]
 pub struct Attackable {
     health: u32,
@@ -22,9 +25,7 @@ pub struct Attackable {
 
 impl Attackable {
     pub fn new(health: u32) -> Self {
-        Self {
-            health
-        }
+        Self { health }
     }
 
     pub fn update(&mut self, damage: u32) -> u32 {

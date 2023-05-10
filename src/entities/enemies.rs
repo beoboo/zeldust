@@ -1,13 +1,16 @@
 use bevy::{math::Vec3Swizzles, prelude::*};
 use bevy_rapier2d::prelude::*;
 use parse_display::Display;
+use std::time::Duration;
 
-use crate::entities::Attackable;
 use crate::{
+    collisions::{ENEMY_ATTACK_COLLISION_GROUP, ENEMY_MOVE_COLLISION_GROUP},
     constants::{ANIMATION_DURATION, ATTACK_DURATION, SPEED, TILE_SIZE},
-    entities::{render_animation, AnimatedEntity, Animation, AttackTimer, Player, Status},
+    entities::{render_animation, AnimatedEntity, Animation, AttackTimer, Attackable, HitTimer, Player, Status},
     frames::TexturePack,
-    from_position, GameAssetType, GameAssets,
+    from_position,
+    GameAssetType,
+    GameAssets,
 };
 
 pub enum AttackType {
@@ -54,6 +57,7 @@ pub struct Enemy {
     ty: EnemyType,
     status: Status,
     can_attack: bool,
+    can_move: bool,
     frame: usize,
 }
 
@@ -63,12 +67,25 @@ impl Enemy {
             ty,
             status: Status::Idle,
             can_attack: true,
+            can_move: true,
             frame: 0,
         }
     }
 
+    pub fn attack_cooldown(&self) -> Duration {
+        ATTACK_DURATION
+    }
+
     pub fn is_attacking(&self) -> bool {
         self.status == Status::Attack
+    }
+
+    pub fn can_move(&self) -> bool {
+        self.can_move
+    }
+
+    pub fn hit(&mut self) {
+        self.can_move = false;
     }
 
     pub fn health(&self) -> u32 {
@@ -107,12 +124,12 @@ impl Enemy {
         }
     }
 
-    pub fn resistance(&self) -> u32 {
+    pub fn resistance(&self) -> f32 {
         match self.ty {
-            EnemyType::Squid => 3,
-            EnemyType::Raccoon => 3,
-            EnemyType::Spirit => 3,
-            EnemyType::Bamboo => 3,
+            EnemyType::Squid => 3.0,
+            EnemyType::Raccoon => 3.0,
+            EnemyType::Spirit => 3.0,
+            EnemyType::Bamboo => 3.0,
         }
     }
 
@@ -184,17 +201,20 @@ pub fn spawn_enemy(
     let rect = atlas.textures[index];
     let offset = (rect.height() - TILE_SIZE) / 2.0;
     let y = y - offset;
-    let collider_height = TILE_SIZE / 2.0;
+    let collider_height = (rect.height() - TILE_SIZE / 4.0) / 2.0;
+    let collider_width = (rect.width() - TILE_SIZE / 4.0) / 2.0;
 
     let enemy = Enemy::new(ty);
     let health = enemy.health();
+
+    let transform = Transform::from_translation(from_position(x, y, window));
 
     commands
         .spawn((
             SpriteSheetBundle {
                 sprite: TextureAtlasSprite::new(index),
                 texture_atlas: assets.get(GameAssetType::Monsters).clone(),
-                transform: Transform::from_translation(from_position(x, y, window)),
+                transform,
                 ..Default::default()
             },
             RigidBody::Dynamic,
@@ -206,11 +226,21 @@ pub fn spawn_enemy(
             enemy,
         ))
         .with_children(|parent| {
+            // Collider for attacks
             parent.spawn((
                 Attackable::new(health),
-                Collider::cuboid(rect.width() / 2.0, collider_height / 2.0),
-                Transform::from_xyz(0.0, -offset, 0.0),
+                Collider::cuboid(rect.width() / 2.0, rect.height() / 2.0),
+                ENEMY_ATTACK_COLLISION_GROUP.clone(),
                 ColliderDebugColor(Color::RED),
+            ));
+
+            // Collider for movements
+            parent.spawn((
+                Attackable::new(health),
+                Collider::cuboid(collider_width, collider_height),
+                ENEMY_MOVE_COLLISION_GROUP.clone(),
+                // Transform::from_xyz(0.0, -offset, transform.translation.z - 1.0),
+                ColliderDebugColor(Color::DARK_GRAY),
             ));
         });
 }
@@ -223,13 +253,13 @@ pub fn move_enemy(
     let player_transform = player_q.single();
 
     for (entity, mut enemy, transform, mut velocity, mut animation) in enemy_q.iter_mut() {
+        if enemy.is_attacking() || !enemy.can_move() {
+            continue;
+        }
+
         let diff = player_transform.translation - transform.translation;
         let distance = diff.length();
         let direction = diff.xy().normalize_or_zero() * enemy.speed() * SPEED;
-
-        if enemy.is_attacking() {
-            continue;
-        }
 
         let mut status = Status::Idle;
 
@@ -240,7 +270,7 @@ pub fn move_enemy(
 
             commands
                 .entity(entity)
-                .insert(AttackTimer(Timer::new(ATTACK_DURATION, TimerMode::Once)));
+                .insert(AttackTimer(Timer::new(enemy.attack_cooldown(), TimerMode::Once)));
         } else if distance < enemy.notice_radius() {
             velocity.linvel = direction.into();
             status = Status::Move(direction);
@@ -279,6 +309,30 @@ pub fn end_enemy_attack(
             enemy.status = Status::Idle;
             enemy.can_attack = true;
             commands.entity(entity).remove::<AttackTimer>();
+        }
+    }
+}
+
+pub fn end_enemy_hit(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut entity_q: Query<(Entity, &mut Enemy, &mut HitTimer, &mut TextureAtlasSprite)>,
+) {
+    let delta = time.delta();
+    let elapsed = time.elapsed();
+
+    for (entity, mut enemy, mut timer, mut sprite) in entity_q.iter_mut() {
+        timer.0.tick(delta);
+
+        if timer.0.finished() {
+            enemy.can_move = true;
+            sprite.color.set_a(1.0);
+            commands.entity(entity).remove::<HitTimer>();
+        } else {
+            let alpha = elapsed.as_micros() as f32;
+            let alpha = alpha.sin();
+
+            sprite.color.set_a(alpha);
         }
     }
 }

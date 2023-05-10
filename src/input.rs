@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::ops::Add;
 
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
@@ -7,8 +7,8 @@ use crate::{
     constants::SPEED,
     entities::{Animation, AttackTimer, Direction, Player, Status},
     events::{SwitchMagic, SwitchWeapon},
-    StaticCollider,
     weapon::Weapon,
+    StaticCollider,
 };
 
 pub fn handle_input(
@@ -24,6 +24,7 @@ pub fn handle_input(
     let (entity, mut player, mut velocity, mut animation) = query.single_mut();
 
     if player.is_attacking() {
+        velocity.linvel = Vec2::ZERO;
         return;
     }
 
@@ -32,19 +33,19 @@ pub fn handle_input(
             KeyCode::Left => {
                 vec.x = -1.0;
                 player.direction = Direction::Left;
-            }
+            },
             KeyCode::Right => {
                 vec.x = 1.0;
                 player.direction = Direction::Right;
-            }
+            },
             KeyCode::Up => {
                 vec.y = 1.0;
                 player.direction = Direction::Up;
-            }
+            },
             KeyCode::Down => {
                 vec.y = -1.0;
                 player.direction = Direction::Down;
-            }
+            },
             _ => (),
         }
     }
@@ -60,22 +61,22 @@ pub fn handle_input(
             KeyCode::Space => {
                 status = Status::Attack;
                 commands.entity(entity).insert(AttackTimer(Timer::new(
-                    Duration::from_millis(weapon.cooldown() as _),
+                    player.attack_cooldown().add(weapon.cooldown()),
                     TimerMode::Once,
                 )));
-            }
+            },
             KeyCode::LControl => {
                 status = Status::Attack;
                 // commands
                 //     .entity(entity)
                 //     .insert(MagicTimer(Timer::new(Duration::from_millis(weapon.cooldown() as _), TimerMode::Once)));
-            }
+            },
             KeyCode::Q => {
                 switch_weapon.send(SwitchWeapon);
-            }
+            },
             KeyCode::E => {
                 switch_magic.send(SwitchMagic);
-            }
+            },
             _ => (),
         }
     }
