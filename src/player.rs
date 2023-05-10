@@ -13,7 +13,7 @@ use crate::weapon::PlayerWeapon;
 use crate::{from_position, from_translation, GameAssets, MapSize, Position, Size, StaticCollider};
 
 #[derive(Component, Deref)]
-pub struct AttackTimer(Timer);
+pub struct AttackTimer(pub Timer);
 
 #[derive(Component, Deref, DerefMut)]
 pub struct AnimationTimer(pub Timer);

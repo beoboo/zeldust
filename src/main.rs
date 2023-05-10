@@ -16,7 +16,7 @@ use crate::player::{
     end_attack, handle_input, move_camera, render_player, spawn_player, update_player_position,
     Player,
 };
-use crate::ui::{change_ui_weapon, spawn_ui};
+use crate::ui::{change_ui_weapon, end_switch_weapon, spawn_ui};
 use crate::weapon::{spawn_weapon, switch_weapon, Weapon};
 use crate::widgets::WidgetsPlugin;
 
@@ -108,7 +108,7 @@ fn main() {
         .register_type::<Player>()
         .add_event::<SwitchWeapon>()
         .add_event::<PlayerPositionChanged>()
-        .insert_resource(ClearColor(Color::rgb(0.04, 0.04, 0.04)))
+        .insert_resource(ClearColor(Color::hex("70deee").unwrap()))
         .insert_resource(
             WorldMap::new()
                 .load_layer(LayerType::Blocks, "assets/map/map_FloorBlocks.csv")
@@ -141,6 +141,7 @@ fn main() {
                 switch_weapon,
                 end_attack,
                 change_ui_weapon,
+                end_switch_weapon,
                 // handle_collisions,
             )
                 .in_set(OnUpdate(AppState::Playing)),

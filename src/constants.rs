@@ -5,4 +5,4 @@ pub const SCREEN_WIDTH: u32 = 1280;
 pub const SCREEN_HEIGHT: u32 = 720;
 pub const CAMERA_SCALE: f32 = 2.;
 pub const ATTACK_DURATION: Duration = Duration::from_millis(400);
-// pub const CAMERA_SCALE: f32 = 4.;
+pub const SWITCH_WEAPON_DURATION: Duration = Duration::from_millis(200);
