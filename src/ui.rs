@@ -35,6 +35,9 @@ pub struct SwitchWeaponTimer(pub Timer);
 pub struct HealthBar;
 
 #[derive(Component)]
+pub struct Experience;
+
+#[derive(Component)]
 pub struct EnergyBar;
 
 #[derive(Clone, Copy, Display)]
@@ -280,9 +283,9 @@ fn spawn_experience(parent: &mut ChildBuilder, asset_server: &Res<AssetServer>) 
             ..default()
         })
         .with_children(|parent| {
-            parent.spawn(
+            parent.spawn((
                 TextBundle::from_sections([TextSection::new(
-                    "123",
+                    "0",
                     TextStyle {
                         font: asset_server.load("fonts/joystix.ttf"),
                         font_size: FONT_SIZE,
@@ -290,7 +293,8 @@ fn spawn_experience(parent: &mut ChildBuilder, asset_server: &Res<AssetServer>) 
                     },
                 )])
                 .with_style(Style { ..default() }),
-            );
+                Experience,
+            ));
         });
 }
 
@@ -404,4 +408,12 @@ pub fn update_energy_ui(player_q: Query<&Player>, mut energy_q: Query<&mut Style
     let mut energy = energy_q.single_mut();
 
     energy.size.width = Val::Px(player.energy.ratio() * ENERGY_BAR_WIDTH);
+}
+
+pub fn update_xp_ui(player_q: Query<&Player>, mut xp_q: Query<&mut Text, With<Experience>>) {
+    let player = player_q.single();
+
+    let mut text = xp_q.single_mut();
+
+    text.sections[0].value = format!("{}", player.xp);
 }

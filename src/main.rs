@@ -15,24 +15,58 @@ use parse_display::Display;
 use crate::{
     camera::{move_camera, spawn_camera},
     collisions::{
-        handle_collisions, handle_magic_collisions, handle_player_collisions, handle_weapon_collisions,
+        damage_attackable,
+        handle_collisions,
+        handle_magic_collisions,
+        handle_player_collisions,
+        handle_weapon_collisions,
+        kill_attackable,
         OBJECTS_COLLISION_GROUP,
     },
     constants::{SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE},
     debug::{can_spawn, DEBUG_PHYSICS, MAX_ENEMIES, MAX_TILES},
     entities::{
-        end_enemy_attack, end_player_attack, end_player_spell_cast, handle_enemy_hit, handle_player_hit, move_enemy,
-        render_enemy, render_player, spawn_enemy, spawn_player, update_depth, Attackable, Enemy, Player,
+        end_enemy_attack,
+        end_player_attack,
+        end_player_spell_cast,
+        handle_enemy_hit,
+        handle_player_hit,
+        move_enemy,
+        render_enemy,
+        render_player,
+        spawn_enemy,
+        spawn_player,
+        update_depth,
+        Attackable,
+        Enemy,
+        Player,
     },
-    events::{EmitParticleEffect, MagicCollision, PlayerCollision, SwitchMagic, SwitchWeapon, WeaponCollision},
+    events::{
+        DamageAttackable,
+        EmitParticleEffect,
+        KillAttackable,
+        MagicCollision,
+        PlayerCollision,
+        SwitchMagic,
+        SwitchWeapon,
+        WeaponCollision,
+    },
     frames::TexturePack,
     input::handle_input,
     magic::{cast_spell, recover_energy, switch_magic, Magic},
     map::{LayerType, WorldMap},
     particles::{animate_particles, spawn_particles},
     ui::{
-        change_magic_item, change_weapon_item, end_switch_magic, end_switch_weapon, spawn_ui, update_energy_ui,
-        update_health_ui, MagicItemBox, WeaponItemBox,
+        change_magic_item,
+        change_weapon_item,
+        end_switch_magic,
+        end_switch_weapon,
+        spawn_ui,
+        update_energy_ui,
+        update_health_ui,
+        update_xp_ui,
+        MagicItemBox,
+        WeaponItemBox,
     },
     weapon::{spawn_weapon, switch_weapon, Weapon},
     widgets::WidgetsPlugin,
@@ -143,6 +177,8 @@ fn main() {
         .add_event::<MagicCollision>()
         .add_event::<WeaponCollision>()
         .add_event::<EmitParticleEffect>()
+        .add_event::<KillAttackable>()
+        .add_event::<DamageAttackable>()
         .insert_resource(ClearColor(Color::hex("70deee").unwrap()))
         .init_resource::<LoadingAssets>()
         .init_resource::<Weapon>()
@@ -163,6 +199,7 @@ fn main() {
                          move_camera,
                          update_energy_ui,
                          update_health_ui,
+                         update_xp_ui,
                      ).in_set(OnUpdate(AppState::Playing)),
         )
         .add_systems((
@@ -195,12 +232,14 @@ fn main() {
                          update_depth,
                          handle_collisions,
                          handle_player_collisions,
-                     )                         .in_set(OnUpdate(AppState::Playing)),
+                         damage_attackable,
+                         kill_attackable.after(damage_attackable),
+                     ).in_set(OnUpdate(AppState::Playing)),
         )
         .add_systems((
                          spawn_particles,
                          animate_particles,
-                     )                         .in_set(OnUpdate(AppState::Playing)),
+                     ).in_set(OnUpdate(AppState::Playing)),
         );
 
     if DEBUG_PHYSICS {
@@ -445,35 +484,38 @@ fn spawn_tile(
 
     let collider_height = TILE_SIZE / 2.0;
 
-    commands
-        .spawn((
-            SpriteSheetBundle {
-                sprite: TextureAtlasSprite::new(index),
-                texture_atlas: atlas_handle.clone(),
-                transform: Transform::from_translation(from_position(x, y, window)),
-                ..Default::default()
-            },
-            RigidBody::Fixed,
-            Layer(*layer_type),
-        ))
-        .with_children(|parent| {
-            let mut child = parent.spawn((
-                // Collider::cuboid(rect.width() / 2.0, collider_height / 2.0),
-                // Transform::from_xyz(0.0, -offset, 0.0),
-                // ColliderDebugColor(Color::BLUE),
-                ));
+    let mut cmd = commands.spawn((
+        SpriteSheetBundle {
+            sprite: TextureAtlasSprite::new(index),
+            texture_atlas: atlas_handle.clone(),
+            transform: Transform::from_translation(from_position(x, y, window)),
+            ..Default::default()
+        },
+        RigidBody::Fixed,
+        Layer(*layer_type),
+    ));
 
-            if layer_type.is_attackable() {
-                println!("Rect: {:?} {:?}", rect.width(), rect.height());
-                child.insert((
-                    Collider::cuboid(rect.width() / 2.0, rect.height() / 2.0),
-                    Attackable::new(1),
-                    OBJECTS_COLLISION_GROUP.clone(),
-                    ActiveEvents::COLLISION_EVENTS,
-                    ColliderDebugColor(Color::BLACK),
-                ));
-            }
-        });
+    cmd.with_children(|parent| {
+        let mut child = parent.spawn((
+            Collider::cuboid(rect.width() / 2.0, collider_height / 2.0),
+            Transform::from_xyz(0.0, -offset, 0.0),
+            ColliderDebugColor(Color::BLUE),
+        ));
+
+        if layer_type.is_attackable() {
+            // println!("Rect: {:?} {:?}", rect.width(), rect.height());
+            child.insert((
+                Collider::cuboid(rect.width() / 2.0, rect.height() / 2.0),
+                OBJECTS_COLLISION_GROUP.clone(),
+                ActiveEvents::COLLISION_EVENTS,
+                ColliderDebugColor(Color::BLACK),
+            ));
+        }
+    });
+
+    if layer_type.is_attackable() {
+        cmd.insert(Attackable::new(1));
+    }
 }
 
 fn spawn_block(

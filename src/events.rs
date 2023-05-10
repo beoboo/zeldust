@@ -45,6 +45,10 @@ pub struct EmitParticleEffect {
     pub offset: Vec3,
 }
 
+pub struct KillAttackable(pub Entity);
+
+pub struct DamageAttackable(pub Entity);
+
 impl EmitParticleEffect {
     pub fn new(ty: ParticleEffect, pos: Vec3) -> Self {
         Self {

@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 
 use crate::LayerType;
 
-pub const DEBUG_PHYSICS: bool = true;
+pub const DEBUG_PHYSICS: bool = false;
 pub const MAX_ENEMIES: i32 = -1;
 pub const MAX_TILES: i32 = -1;
 

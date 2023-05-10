@@ -1,7 +1,7 @@
-use std::thread::current;
 use bevy::prelude::*;
 use parse_display::Display;
 use rand::Rng;
+use std::thread::current;
 
 use crate::{
     collisions::{MAGIC_COLLISION_GROUP, OBJECTS_COLLISION_GROUP, PLAYER_MOVE_COLLISION_GROUP},

@@ -10,11 +10,10 @@ use crate::{
     entities::{AttackType, Enemy, EnemyType},
     events::EmitParticleEffect,
     frames::TexturePack,
-    magic::PlayerMagic,
+    magic::{Magic, PlayerMagic},
     GameAssetType,
     GameAssets,
 };
-use crate::magic::Magic;
 
 #[derive(Component)]
 pub struct ParticleEffectAnimation {

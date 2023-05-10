@@ -32,6 +32,7 @@ pub struct Player {
     pub speed: ClampedU32,
     pub damage: ClampedU32,
     pub magic: ClampedU32,
+    pub xp: u32,
     pub status: Status,
     pub direction: Direction,
     pub frame: usize,
@@ -46,6 +47,7 @@ impl Default for Player {
             speed: ClampedU32::new(5, 5),
             damage: ClampedU32::new(10, 10),
             magic: ClampedU32::new(4, 4),
+            xp: 500,
             status: Status::Idle,
             direction: Direction::Down,
             frame: 0,
@@ -81,7 +83,7 @@ impl Player {
 
     pub fn cast_spell(&mut self, cost: u32) -> bool {
         if self.energy.value() >= cost {
-            self.energy -= cost;
+            // self.energy -= cost;
             true
         } else {
             false
@@ -90,6 +92,10 @@ impl Player {
 
     pub fn heal(&mut self, strength: u32) {
         self.health += strength;
+    }
+
+    pub fn add_xp(&mut self, xp: u32) {
+        self.xp += xp;
     }
 }
 

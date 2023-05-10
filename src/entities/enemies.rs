@@ -109,7 +109,7 @@ impl Enemy {
         }
     }
 
-    pub fn exp(&self) -> u32 {
+    pub fn xp(&self) -> u32 {
         match self.ty {
             EnemyType::Squid => 100,
             EnemyType::Raccoon => 250,
@@ -235,12 +235,12 @@ pub fn spawn_enemy(
             LockedAxes::ROTATION_LOCKED,
             Velocity::zero(),
             Animation::new(ANIMATION_DURATION),
+            Attackable::new(health),
             enemy,
         ))
         .with_children(|parent| {
             // Collider for attacks
             parent.spawn((
-                Attackable::new(health),
                 Collider::cuboid(rect.width() / 2.0, rect.height() / 2.0),
                 ENEMY_ATTACK_COLLISION_GROUP.clone(),
                 Sensor,

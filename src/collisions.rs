@@ -5,12 +5,11 @@ use lazy_static::lazy_static;
 use crate::{
     constants::{HIT_DURATION, SPEED},
     entities::{Attackable, Enemy, HitTimer, Player},
-    events::{EmitParticleEffect, MagicCollision, PlayerCollision, WeaponCollision},
-    magic::PlayerMagic,
+    events::{DamageAttackable, EmitParticleEffect, KillAttackable, MagicCollision, PlayerCollision, WeaponCollision},
+    magic::{Magic, PlayerMagic},
     particles::ParticleEffect,
     weapon::{PlayerWeapon, Weapon},
 };
-use crate::magic::Magic;
 
 // Player: GROUP_1
 // Weapon: GROUP_2
@@ -36,6 +35,7 @@ pub fn handle_collisions(
     player_q: Query<(Entity, &Children), With<Player>>,
     magic_q: Query<Entity, (With<PlayerMagic>, Without<Player>)>,
     weapon_q: Query<Entity, (With<PlayerWeapon>, Without<Player>)>,
+    parent_q: Query<&Parent>,
     mut player_collision_writer: EventWriter<PlayerCollision>,
     mut magic_collision_writer: EventWriter<MagicCollision>,
     mut weapon_collision_writer: EventWriter<WeaponCollision>,
@@ -50,9 +50,11 @@ pub fn handle_collisions(
                 // log::info!("Magic: {magic:?}");
                 if h1 == &magic || h2 == &magic {
                     log::info!("Magic collision: {h1:?} {h2:?}");
+                    let other = if &magic == h1 { h2 } else { h1 };
+
                     magic_collision_writer.send(MagicCollision::new(
                         magic.clone(),
-                        if &magic == h1 { h2.clone() } else { h1.clone() },
+                        parent_q.get(other.clone()).expect("Parent must exist").get(),
                     ));
 
                     with_magic = true;
@@ -68,9 +70,10 @@ pub fn handle_collisions(
                 log::info!("Weapon: {weapon:?}");
                 if h1 == &weapon || h2 == &weapon {
                     log::info!("Weapon collision: {h1:?} {h2:?}");
+                    let other = if &weapon == h1 { h2 } else { h1 };
                     weapon_collision_writer.send(WeaponCollision::new(
                         weapon.clone(),
-                        if &weapon == h1 { h2.clone() } else { h1.clone() },
+                        parent_q.get(other.clone()).expect("Parent must exist").get(),
                     ));
 
                     continue;
@@ -79,9 +82,11 @@ pub fn handle_collisions(
 
             if children.contains(&h1) || children.contains(h2) {
                 log::info!("Player collision: {h1:?} {h2:?}");
+
+                let other = if children.contains(h1) { h2 } else { h1 };
                 player_collision_writer.send(PlayerCollision::new(
                     player.clone(),
-                    if children.contains(h1) { h2.clone() } else { h1.clone() },
+                    parent_q.get(other.clone()).expect("Parent must exist").get(),
                 ));
 
                 continue;
@@ -93,78 +98,157 @@ pub fn handle_collisions(
 }
 
 pub fn handle_magic_collisions(
-    mut commands: Commands,
-    player_q: Query<(&Player, &Transform)>,
-    mut magic_q: Query<&Magic, With<PlayerMagic>>,
-    mut attackable_q: Query<(&Parent, &mut Attackable)>,
-    mut parent_q: Query<&Transform>,
-    mut enemy_q: Query<(&mut Enemy, &Transform, &mut Velocity)>,
+    player_q: Query<&Player>,
+    magic_q: Query<&Magic, With<PlayerMagic>>,
+    mut attackable_q: Query<(Entity, &mut Attackable)>,
     mut magic_collision_reader: EventReader<MagicCollision>,
-    mut particle_effect_writer: EventWriter<EmitParticleEffect>,
+    mut kill_attackable_writer: EventWriter<KillAttackable>,
+    mut damage_attackable_writer: EventWriter<DamageAttackable>,
 ) {
-    let (player, player_transform) = player_q.single();
+    let player = player_q.single();
 
     for event in magic_collision_reader.iter() {
         let Ok(magic) = magic_q.get(event.magic) else {
             return;
         };
 
-        // println!("handling magic collision");
+        println!("handling magic collision");
 
-        if let Ok((parent, mut attackable)) = attackable_q.get_mut(event.other) {
-            let remaining_health = attackable.hit(player.damage() + magic.strength());
-            // println!("Remaining health: {remaining_health}");
+        attack_attackable(
+            &mut attackable_q,
+            &mut kill_attackable_writer,
+            &mut damage_attackable_writer,
+            player,
+            magic.strength(),
+            &event.other,
+        );
+    }
+}
 
-            if remaining_health == 0 {
-                let transform = parent_q.get(parent.get()).expect("Parent must exist");
+pub fn handle_weapon_collisions(
+    player_q: Query<&Player, &Transform>,
+    weapon_q: Query<&Weapon, With<PlayerWeapon>>,
+    mut attackable_q: Query<(Entity, &mut Attackable)>,
+    mut weapon_collision_reader: EventReader<WeaponCollision>,
+    mut kill_attackable_writer: EventWriter<KillAttackable>,
+    mut damage_attackable_writer: EventWriter<DamageAttackable>,
+) {
+    let player = player_q.single();
 
-                let effect = if let Ok((enemy, _, _)) = enemy_q.get_mut(parent.get()) {
-                    ParticleEffect::EnemyDeath(enemy.clone())
-                } else {
-                    ParticleEffect::Leaf
-                };
-
-                particle_effect_writer.send(EmitParticleEffect::new(effect, transform.translation));
-                commands.entity(parent.get()).despawn_recursive();
-            } else {
-                // If it's an enemy, bump it back
-                if let Ok((mut enemy, enemy_transform, mut velocity)) = enemy_q.get_mut(parent.get()) {
-                    let direction = player_transform.translation - enemy_transform.translation;
-
-                    velocity.linvel = -direction.xy().normalize_or_zero() * enemy.resistance() * SPEED;
-
-                    enemy.hit();
-                    commands
-                        .entity(parent.get())
-                        .insert(HitTimer(Timer::new(HIT_DURATION, TimerMode::Once)));
-                } else {
-                    log::info!("Unknown collision");
-                }
-            }
+    for event in weapon_collision_reader.iter() {
+        println!("handling weapon collision");
+        let Ok(weapon) = weapon_q.get_single() else {
+            return;
         };
+
+        attack_attackable(
+            &mut attackable_q,
+            &mut kill_attackable_writer,
+            &mut damage_attackable_writer,
+            player,
+            weapon.damage(),
+            &event.other,
+        );
+    }
+}
+
+fn attack_attackable(
+    attackable_q: &mut Query<(Entity, &mut Attackable)>,
+    kill_attackable_writer: &mut EventWriter<KillAttackable>,
+    damage_attackable_writer: &mut EventWriter<DamageAttackable>,
+    player: &Player,
+    damage: u32,
+    attacked: &Entity,
+) {
+    if let Ok((entity, mut attackable)) = attackable_q.get_mut(*attacked) {
+        let remaining_health = attackable.hit(player.damage() + damage);
+        println!("Remaining health: {remaining_health}");
+
+        if remaining_health == 0 {
+            kill_attackable_writer.send(KillAttackable(entity.clone()));
+        } else {
+            damage_attackable_writer.send(DamageAttackable(entity.clone()));
+        }
+    }
+}
+
+pub fn kill_attackable(
+    mut commands: Commands,
+    mut player_q: Query<&mut Player>,
+    mut parent_q: Query<&Transform>,
+    attackable_q: Query<Entity, With<Attackable>>,
+    mut enemy_q: Query<&mut Enemy>,
+    mut kill_attackable_reader: EventReader<KillAttackable>,
+    mut particle_effect_writer: EventWriter<EmitParticleEffect>,
+) {
+    let mut player = player_q.single_mut();
+
+    for event in kill_attackable_reader.iter() {
+        if !attackable_q.contains(event.0) {
+            continue;
+        }
+
+        let transform = parent_q.get(event.0).expect("Parent entity must exist");
+
+        let effect = if let Ok(enemy) = enemy_q.get_mut(event.0) {
+            player.add_xp(enemy.xp());
+            ParticleEffect::EnemyDeath(enemy.clone())
+        } else {
+            ParticleEffect::Leaf
+        };
+
+        println!("Killing {:?}", event.0);
+        particle_effect_writer.send(EmitParticleEffect::new(effect, transform.translation));
+        commands.entity(event.0).despawn_recursive();
+    }
+}
+
+pub fn damage_attackable(
+    mut commands: Commands,
+    player_q: Query<&Transform, With<Player>>,
+    mut attackable_q: Query<Entity, With<Attackable>>,
+    mut enemy_q: Query<(&mut Enemy, &Transform, &mut Velocity)>,
+    mut damage_attackable_reader: EventReader<DamageAttackable>,
+) {
+    let player_transform = player_q.single();
+
+    for event in damage_attackable_reader.iter() {
+        if !attackable_q.contains(event.0) {
+            continue;
+        }
+
+        // If it's an enemy, bump it back
+        if let Ok((mut enemy, enemy_transform, mut velocity)) = enemy_q.get_mut(event.0) {
+            let direction = player_transform.translation - enemy_transform.translation;
+
+            velocity.linvel = -direction.xy().normalize_or_zero() * enemy.resistance() * SPEED;
+
+            enemy.hit();
+            commands
+                .entity(event.0)
+                .insert(HitTimer(Timer::new(HIT_DURATION, TimerMode::Once)));
+        } else {
+            log::info!("Unknown collision");
+        }
     }
 }
 
 pub fn handle_player_collisions(
     mut commands: Commands,
     mut player_q: Query<(&mut Player, &Transform)>,
-    mut attackable_q: Query<&Parent, With<Attackable>>,
-    mut enemy_q: Query<&Enemy>,
+    enemy_q: Query<&Enemy>,
     mut player_collision_reader: EventReader<PlayerCollision>,
     mut particle_effect_writer: EventWriter<EmitParticleEffect>,
 ) {
     let (mut player, transform) = player_q.single_mut();
 
     for event in player_collision_reader.iter() {
-        let Ok(parent) = attackable_q.get(event.other) else {
-            // Not attackable, bailing out...
-            continue;
-        };
-
-        let Ok(enemy) = enemy_q.get(parent.get()) else {
+        println!("player collision");
+        let Ok(enemy) = enemy_q.get(event.other) else {
             // Not an enemy, bailing out...
             continue;
         };
+        println!("enemy collision");
 
         player.hit(enemy.damage());
         commands
@@ -175,57 +259,5 @@ pub fn handle_player_collisions(
             ParticleEffect::EnemyAttack(enemy.clone()),
             transform.translation,
         ));
-    }
-}
-
-pub fn handle_weapon_collisions(
-    mut commands: Commands,
-    player_q: Query<(&Player, &Transform)>,
-    mut weapon_q: Query<&Weapon, With<PlayerWeapon>>,
-    mut attackable_q: Query<(&Parent, &mut Attackable)>,
-    mut parent_q: Query<&Transform>,
-    mut enemy_q: Query<(&mut Enemy, &Transform, &mut Velocity)>,
-    mut weapon_collision_reader: EventReader<WeaponCollision>,
-    mut particle_effect_writer: EventWriter<EmitParticleEffect>,
-) {
-    let (player, player_transform) = player_q.single();
-
-    for event in weapon_collision_reader.iter() {
-        println!("handling weapon collision");
-        let Ok(weapon) = weapon_q.get_single_mut() else {
-            return;
-        };
-
-        if let Ok((parent, mut attackable)) = attackable_q.get_mut(event.other) {
-            let remaining_health = attackable.hit(player.damage() + weapon.damage());
-            println!("Remaining health: {remaining_health}");
-
-            if remaining_health == 0 {
-                let transform = parent_q.get(parent.get()).expect("Parent must exist");
-
-                let effect = if let Ok((enemy, _, _)) = enemy_q.get_mut(parent.get()) {
-                    ParticleEffect::EnemyDeath(enemy.clone())
-                } else {
-                    ParticleEffect::Leaf
-                };
-
-                particle_effect_writer.send(EmitParticleEffect::new(effect, transform.translation));
-                commands.entity(parent.get()).despawn_recursive();
-            } else {
-                // If it's an enemy, bump it back
-                if let Ok((mut enemy, enemy_transform, mut velocity)) = enemy_q.get_mut(parent.get()) {
-                    let direction = player_transform.translation - enemy_transform.translation;
-
-                    velocity.linvel = -direction.xy().normalize_or_zero() * enemy.resistance() * SPEED;
-
-                    enemy.hit();
-                    commands
-                        .entity(parent.get())
-                        .insert(HitTimer(Timer::new(HIT_DURATION, TimerMode::Once)));
-                } else {
-                    log::info!("Unknown collision");
-                }
-            }
-        };
     }
 }
