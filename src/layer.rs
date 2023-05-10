@@ -13,14 +13,14 @@ impl Layer {
             .from_reader(file);
         for result in rdr.records() {
             let record = result.unwrap();
-            data.push(record
-                .iter()
-                .map(|r| r.parse::<i32>().expect("Record is not an int"))
-                .collect::<Vec<_>>());
+            data.push(
+                record
+                    .iter()
+                    .map(|r| r.parse::<i32>().expect("Record is not an int"))
+                    .collect::<Vec<_>>(),
+            );
         }
 
-        Self {
-            data
-        }
+        Self { data }
     }
 }

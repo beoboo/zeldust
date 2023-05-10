@@ -4,27 +4,32 @@ use bevy::asset::LoadState;
 use bevy::prelude::*;
 use bevy::window::{PrimaryWindow, WindowResolution};
 use bevy_common_assets::json::JsonAssetPlugin;
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_inspector_egui::quick::{ResourceInspectorPlugin, WorldInspectorPlugin};
 use bevy_prototype_lyon::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 use crate::constants::{CAMERA_SCALE, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE};
-use crate::events::{PlayerPosition, SwitchWeapon};
+use crate::events::{PlayerPositionChanged, SwitchWeapon};
 use crate::frames::TexturePack;
-// use crate::collisions::handle_collisions;
 use crate::map::{LayerType, WorldMap};
-use crate::player::{end_attack, handle_input, move_camera, Player, render_player, spawn_player, update_player_position};
+use crate::player::{
+    end_attack, handle_input, move_camera, render_player, spawn_player, update_player_position,
+    Player,
+};
+use crate::ui::{change_ui_weapon, spawn_ui};
 use crate::weapon::{spawn_weapon, switch_weapon, Weapon};
+use crate::widgets::WidgetsPlugin;
 
-mod constants;
-mod player;
-mod map;
-mod layer;
-mod ui;
 mod collisions;
-mod frames;
+mod constants;
 mod events;
+mod frames;
+mod layer;
+mod map;
+mod player;
+mod ui;
 mod weapon;
+mod widgets;
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Hash, States)]
 pub enum AppState {
@@ -50,7 +55,10 @@ pub struct Size {
 
 impl Default for Size {
     fn default() -> Self {
-        Self { width: TILE_SIZE as f32, height: TILE_SIZE as f32 }
+        Self {
+            width: TILE_SIZE as f32,
+            height: TILE_SIZE as f32,
+        }
     }
 }
 
@@ -78,7 +86,6 @@ pub struct LoadingAssets {
     handles: HashMap<HandleUntyped, bool>,
 }
 
-
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -92,55 +99,56 @@ fn main() {
         .add_plugin(WorldInspectorPlugin::default())
         // .add_plugin(TilesetPlugin::default())
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
-        .add_plugin(RapierDebugRenderPlugin::default()
-            .disabled()
-        )
+        .add_plugin(RapierDebugRenderPlugin::default().disabled())
         .add_plugin(ShapePlugin)
         .add_plugin(JsonAssetPlugin::<TexturePack>::new(&["json"]))
+        .add_plugin(WidgetsPlugin)
+        .add_plugin(ResourceInspectorPlugin::<Weapon>::default())
         .register_type::<Position>()
         .register_type::<Player>()
         .add_event::<SwitchWeapon>()
+        .add_event::<PlayerPositionChanged>()
         .insert_resource(ClearColor(Color::rgb(0.04, 0.04, 0.04)))
         .insert_resource(
-            WorldMap::new()
-                .load_layer(LayerType::Blocks, "assets/map/map_FloorBlocks.csv")
-                .load_layer(LayerType::Grass, "assets/map/map_Grass.csv")
-                .load_layer(LayerType::Objects, "assets/map/map_Objects.csv")
+            WorldMap::new(), // .load_layer(LayerType::Blocks, "assets/map/map_FloorBlocks.csv")
+                             // .load_layer(LayerType::Grass, "assets/map/map_Grass.csv")
+                             // .load_layer(LayerType::Objects, "assets/map/map_Objects.csv"),
         )
         .init_resource::<LoadingAssets>()
         .init_resource::<Weapon>()
         .add_state::<AppState>()
         .add_systems((load_ground, load_assets, finish_loading).in_set(OnUpdate(AppState::Loading)))
-        .add_systems((
-            prepare_assets,
-        ).in_schedule(OnExit(AppState::Loading)))
-        .add_systems((
-            // debug_tiles,
-            spawn_ground,
-            spawn_cameras,
-            spawn_tiles.after(spawn_cameras),
-            // spawn_player.after(spawn_tiles),
-            spawn_player.after(spawn_cameras)
-        ).in_schedule(OnEnter(AppState::Playing)))
-        .add_systems((
-            handle_input,
-            update_player_position,
-            move_camera,
-            render_player,
-            spawn_weapon,
-            switch_weapon,
-            end_attack,
-            // handle_collisions,
-        ).in_set(OnUpdate(AppState::Playing)))
+        .add_systems((prepare_assets,).in_schedule(OnExit(AppState::Loading)))
+        .add_systems(
+            (
+                // debug_tiles,
+                spawn_ground,
+                spawn_cameras,
+                spawn_tiles.after(spawn_cameras),
+                spawn_player.after(spawn_cameras),
+                spawn_ui.after(spawn_player),
+            )
+                .in_schedule(OnEnter(AppState::Playing)),
+        )
+        .add_systems(
+            (
+                handle_input,
+                update_player_position,
+                move_camera,
+                render_player,
+                spawn_weapon,
+                switch_weapon,
+                end_attack,
+                change_ui_weapon,
+                // handle_collisions,
+            )
+                .in_set(OnUpdate(AppState::Playing)),
+        )
         .add_system(position_tiles.in_base_set(CoreSet::PostUpdate))
-        .add_event::<PlayerPosition>()
         .run();
 }
 
-fn load_ground(
-    asset_server: Res<AssetServer>,
-    mut assets: ResMut<LoadingAssets>,
-) {
+fn load_ground(asset_server: Res<AssetServer>, mut assets: ResMut<LoadingAssets>) {
     let handle = asset_server.load_untyped("map/ground.png");
 
     match asset_server.get_load_state(handle.clone()) {
@@ -153,10 +161,7 @@ fn load_ground(
     }
 }
 
-fn load_assets(
-    asset_server: Res<AssetServer>,
-    mut assets: ResMut<LoadingAssets>,
-) {
+fn load_assets(asset_server: Res<AssetServer>, mut assets: ResMut<LoadingAssets>) {
     for ty in vec!["grass", "objects", "player", "weapons"] {
         for asset in vec!["json", "png"] {
             let path = format!("textures/{ty}.{asset}");
@@ -174,10 +179,7 @@ fn load_assets(
     }
 }
 
-fn finish_loading(
-    mut app_state: ResMut<NextState<AppState>>,
-    assets: Res<LoadingAssets>,
-) {
+fn finish_loading(mut app_state: ResMut<NextState<AppState>>, assets: Res<LoadingAssets>) {
     if assets.handles.is_empty() {
         return;
     }
@@ -205,22 +207,43 @@ fn prepare_assets(
     let width = image.texture_descriptor.size.width as f32;
     let height = image.texture_descriptor.size.height as f32;
 
-    let size = MapSize {
-        width,
-        height,
-    };
+    let size = MapSize { width, height };
 
     commands.insert_resource(size);
 
-    let player_atlas_handle = build_texture_atlas("player", &asset_server, &mut images, &mut texture_atlases, &tiles_data);
-    let weapons_atlas_handle = build_texture_atlas("weapons", &asset_server, &mut images, &mut texture_atlases, &tiles_data);
+    let player_atlas_handle = build_texture_atlas(
+        "player",
+        &asset_server,
+        &mut images,
+        &mut texture_atlases,
+        &tiles_data,
+    );
+    let weapons_atlas_handle = build_texture_atlas(
+        "weapons",
+        &asset_server,
+        &mut images,
+        &mut texture_atlases,
+        &tiles_data,
+    );
 
     let mut layers = HashMap::new();
 
-    let texture_atlas_handle = build_texture_atlas("grass", &asset_server, &mut images, &mut texture_atlases, &tiles_data);
+    let texture_atlas_handle = build_texture_atlas(
+        "grass",
+        &asset_server,
+        &mut images,
+        &mut texture_atlases,
+        &tiles_data,
+    );
     layers.insert(LayerType::Grass, texture_atlas_handle);
 
-    let texture_atlas_handle = build_texture_atlas("objects", &asset_server, &mut images, &mut texture_atlases, &tiles_data);
+    let texture_atlas_handle = build_texture_atlas(
+        "objects",
+        &asset_server,
+        &mut images,
+        &mut texture_atlases,
+        &tiles_data,
+    );
     layers.insert(LayerType::Objects, texture_atlas_handle);
 
     let assets = GameAssets {
@@ -232,7 +255,13 @@ fn prepare_assets(
     commands.insert_resource(assets);
 }
 
-fn build_texture_atlas(ty: &str, asset_server: &Res<AssetServer>, images: &mut ResMut<Assets<Image>>, texture_atlases: &mut ResMut<Assets<TextureAtlas>>, textures: &Res<Assets<TexturePack>>) -> Handle<TextureAtlas> {
+fn build_texture_atlas(
+    ty: &str,
+    asset_server: &Res<AssetServer>,
+    images: &mut ResMut<Assets<Image>>,
+    texture_atlases: &mut ResMut<Assets<TextureAtlas>>,
+    textures: &Res<Assets<TexturePack>>,
+) -> Handle<TextureAtlas> {
     let path = format!("textures/{ty}");
 
     let handle = asset_server.load(format!("{path}.json"));
@@ -260,14 +289,14 @@ fn spawn_ground(
 ) {
     let Ok(window) = window.get_single() else { return; };
 
-    let handle = asset_server.load("map/ground.png");
+    // let handle = asset_server.load("map/ground.png");
 
     let x = (size.width - window.width()) / 2.;
     let y = -((size.height - window.height()) / 2.);
 
     commands.spawn((
         SpriteBundle {
-            texture: handle.clone(),
+            // texture: handle.clone(),
             transform: Transform::from_xyz(x, y, -1000.0),
             ..Default::default()
         },
@@ -275,10 +304,7 @@ fn spawn_ground(
     ));
 }
 
-fn spawn_cameras(
-    mut commands: Commands,
-    map_size: Res<MapSize>,
-) {
+fn spawn_cameras(mut commands: Commands, map_size: Res<MapSize>) {
     // println!("spawn cameras");
 
     let (x, y) = (map_size.width as f32 / 2., map_size.height as f32 / 2.);
@@ -305,14 +331,12 @@ fn debug_tiles(
     let atlas = atlases.get(&handle).unwrap();
 
     for (id, texture) in atlas.textures.iter().enumerate() {
-        commands.spawn((
-            SpriteSheetBundle {
-                sprite: TextureAtlasSprite::new(id),
-                texture_atlas: handle.clone(),
-                transform: Transform::from_translation(texture.center().extend(0.0)),
-                ..Default::default()
-            },
-        ));
+        commands.spawn((SpriteSheetBundle {
+            sprite: TextureAtlasSprite::new(id),
+            texture_atlas: handle.clone(),
+            transform: Transform::from_translation(texture.center().extend(0.0)),
+            ..Default::default()
+        },));
     }
 }
 
@@ -352,24 +376,26 @@ fn spawn_tiles(
 
                         let collider_height = TILE_SIZE / 2.0;
 
-                        commands.spawn((
-                            SpriteSheetBundle {
-                                sprite: TextureAtlasSprite::new(index),
-                                texture_atlas: atlas_handle.clone(),
-                                ..Default::default()
-                            },
-                            RigidBody::Fixed,
-                            Position { x, y },
-                            Layer(*layer_type),
-                            Size::default(),
-                        )).with_children(|parent| {
-                            parent.spawn((
-                                // Restitution::coefficient(0.1),
-                                Collider::cuboid(image.width() / 2.0, collider_height / 2.0),
-                                Transform::from_xyz(0.0, -offset, 0.0),
-                                ColliderDebugColor(Color::ALICE_BLUE),
-                            ));
-                        });
+                        commands
+                            .spawn((
+                                SpriteSheetBundle {
+                                    sprite: TextureAtlasSprite::new(index),
+                                    texture_atlas: atlas_handle.clone(),
+                                    ..Default::default()
+                                },
+                                RigidBody::Fixed,
+                                Position { x, y },
+                                Layer(*layer_type),
+                                Size::default(),
+                            ))
+                            .with_children(|parent| {
+                                parent.spawn((
+                                    // Restitution::coefficient(0.1),
+                                    Collider::cuboid(image.width() / 2.0, collider_height / 2.0),
+                                    Transform::from_xyz(0.0, -offset, 0.0),
+                                    ColliderDebugColor(Color::ALICE_BLUE),
+                                ));
+                            });
                     }
                     395 => {
                         let x = (col_idx as f32 + 0.5) * TILE_SIZE;
@@ -436,4 +462,3 @@ fn position_tiles(
         transform.translation = from_position(pos, window);
     }
 }
-

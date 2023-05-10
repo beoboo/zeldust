@@ -1,15 +1,16 @@
 use std::time::Duration;
 
 use bevy::prelude::*;
+use bevy::utils::HashMap;
 use bevy::window::PrimaryWindow;
 use bevy_rapier2d::prelude::*;
 use parse_display::Display;
 
-use crate::{from_position, from_translation, GameAssets, MapSize, Position, Size, StaticCollider};
 use crate::constants::ATTACK_DURATION;
-use crate::events::{PlayerPosition, SwitchWeapon};
+use crate::events::{PlayerPositionChanged, SwitchWeapon};
 use crate::frames::TexturePack;
 use crate::weapon::Weapon;
+use crate::{from_position, from_translation, GameAssets, MapSize, Position, Size, StaticCollider};
 
 #[derive(Component, Deref)]
 pub struct AttackTimer(Timer);
@@ -25,23 +26,55 @@ pub struct Player {
     pub is_attacking: bool,
 }
 
-pub struct PlayerStats {
-    health: u32,
-    energy: u32,
-    attack: u32,
-    magic: u32,
-    speed: u32,
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum StatType {
+    Health,
+    Energy,
+    Attack,
+    Magic,
+    Speed,
 }
 
-impl Default for PlayerStats {
-    fn default() -> Self {
+pub struct Stat {
+    pub value: u32,
+    pub max: u32,
+}
+
+impl Stat {
+    pub fn new(max: u32) -> Self {
         Self {
-            health: 100,
-            energy: 60,
-            attack: 10,
-            magic: 4,
-            speed: 4,
+            value: max / 2,
+            max,
         }
+    }
+
+    pub fn ratio(&self) -> f32 {
+        (self.value as f32 / self.max as f32)
+    }
+}
+
+#[derive(Component)]
+pub struct Stats {
+    stats: HashMap<StatType, Stat>,
+}
+
+impl Default for Stats {
+    fn default() -> Self {
+        let mut stats = HashMap::default();
+
+        stats.insert(StatType::Attack, Stat::new(10));
+        stats.insert(StatType::Energy, Stat::new(60));
+        stats.insert(StatType::Health, Stat::new(100));
+        stats.insert(StatType::Magic, Stat::new(4));
+        stats.insert(StatType::Speed, Stat::new(6));
+
+        Self { stats }
+    }
+}
+
+impl Stats {
+    pub fn ratio(&self, ty: StatType) -> f32 {
+        self.stats[&ty].ratio()
     }
 }
 
@@ -102,6 +135,7 @@ pub fn spawn_player(
             LockedAxes::ROTATION_LOCKED,
             ActiveEvents::COLLISION_EVENTS,
             Velocity::zero(),
+            Stats::default(),
             AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
             Size::default(),
         ))
@@ -183,7 +217,7 @@ pub fn handle_input(
 
 pub fn move_camera(
     mut query: Query<&mut Position, With<Camera>>,
-    mut position_reader: EventReader<PlayerPosition>,
+    mut position_reader: EventReader<PlayerPositionChanged>,
 ) {
     if let Some(player_position) = position_reader.iter().next() {
         let mut camera_position = query.single_mut();
@@ -194,7 +228,7 @@ pub fn move_camera(
 pub fn update_player_position(
     window: Query<&Window, With<PrimaryWindow>>,
     mut query: Query<(&mut Position, &mut Transform), With<Player>>,
-    mut position_writer: EventWriter<PlayerPosition>,
+    mut position_writer: EventWriter<PlayerPositionChanged>,
 ) {
     let Ok(window) = window.get_single() else { return; };
 
@@ -203,7 +237,7 @@ pub fn update_player_position(
 
     *position = from_translation(transform.translation, window);
 
-    position_writer.send(PlayerPosition(*position));
+    position_writer.send(PlayerPositionChanged(*position));
 }
 
 pub fn render_player(
