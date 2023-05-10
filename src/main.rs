@@ -98,9 +98,9 @@ fn main() {
         .insert_resource(ClearColor(Color::rgb(0.04, 0.04, 0.04)))
         .insert_resource(
             WorldMap::new()
-                .load_layer(LayerType::Blocks, "assets/map/map_FloorBlocks.csv")
-                .load_layer(LayerType::Grass, "assets/map/map_Grass.csv")
-                .load_layer(LayerType::Objects, "assets/map/map_Objects.csv")
+                // .load_layer(LayerType::Blocks, "assets/map/map_FloorBlocks.csv")
+                // .load_layer(LayerType::Grass, "assets/map/map_Grass.csv")
+                // .load_layer(LayerType::Objects, "assets/map/map_Objects.csv")
         )
         .init_resource::<LoadingAssets>()
         .add_state::<AppState>()

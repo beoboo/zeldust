@@ -225,7 +225,7 @@ pub fn render_player(
 
 pub fn spawn_weapon(
     mut commands: Commands,
-    player_q: Query<(&Player, &Transform)>,
+    player_q: Query<(Entity, &Player)>,
     weapon_q: Query<Entity, With<Weapon>>,
     asset_server: Res<AssetServer>,
     assets: Res<GameAssets>,
@@ -235,8 +235,7 @@ pub fn spawn_weapon(
         return;
     };
 
-    let (player, transform) = player_q.single();
-    let mut transform = transform.clone();
+    let (entity, player) = player_q.single();
 
     if !player.is_attacking {
         return;
@@ -251,33 +250,32 @@ pub fn spawn_weapon(
     let index = pack.index_of(&name);
     let frame = &pack.frames[&name];
 
-    match direction {
+    let translation = match direction {
         Direction::Down => {
-            transform.translation.y -= frame.frame.h + 2.0;
+            Vec2::new(0.0, -(TILE_SIZE - (TILE_SIZE - frame.frame.h) / 2.0 - 4.0))
         },
         Direction::Left => {
-            transform.translation.x -= (TILE_SIZE + frame.frame.w) / 2.0;
-            transform.translation.y -= frame.frame.h / 2.0;
-            // transform.translation.y -= TILE_SIZE;
+            Vec2::new(-(TILE_SIZE + frame.frame.w) / 2.0, -TILE_SIZE / 4.0)
         },
         Direction::Right => {
-            transform.translation.x += (TILE_SIZE + frame.frame.w) / 2.0;
-            transform.translation.y -= frame.frame.h / 2.0;
+            Vec2::new((TILE_SIZE + frame.frame.w) / 2.0, -TILE_SIZE / 4.0)
         },
         Direction::Up => {
-            transform.translation.y += (TILE_SIZE + frame.frame.h) / 2.0;
+            Vec2::new(0.0, (TILE_SIZE - (TILE_SIZE - frame.frame.h) / 2.0 - 4.0))
         },
-    }
+    };
 
-    commands.spawn((
-        SpriteSheetBundle {
-            sprite: TextureAtlasSprite::new(index),
-            texture_atlas: assets.weapons.clone(),
-            transform,
-            ..Default::default()
-        },
-        Weapon
-    ));
+    commands.entity(entity).with_children(|parent| {
+        parent.spawn((
+            SpriteSheetBundle {
+                sprite: TextureAtlasSprite::new(index),
+                texture_atlas: assets.weapons.clone(),
+                transform: Transform::from_translation(translation.extend(0.0)),
+                ..Default::default()
+            },
+            Weapon
+        ));
+    });
 }
 
 pub fn end_attack(
@@ -292,9 +290,9 @@ pub fn end_attack(
         if timer.0.finished() {
             player.is_attacking = false;
             commands.entity(entity).remove::<AttackTimer>();
-            let weapon = weapon_q.single();
-
-            commands.entity(weapon).despawn();
+            // let weapon = weapon_q.single();
+            //
+            // commands.entity(weapon).despawn();
         }
     }
 }
