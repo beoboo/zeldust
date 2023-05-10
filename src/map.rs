@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_rapier2d::parry::utils::hashmap::HashMap;
 use rand::Rng;
+use crate::debug::VALID_LAYERS;
 
 use crate::layer::Layer;
 
@@ -22,6 +23,10 @@ impl LayerType {
             _ => index,
         }
     }
+
+    pub fn is_attackable(&self) -> bool {
+        matches!(*self, LayerType::Grass)
+    }
 }
 
 #[derive(Resource)]
@@ -40,7 +45,10 @@ impl WorldMap {
         let layer = Layer::load(path);
 
         let mut layers = self.layers;
-        layers.insert(ty, layer);
+
+        if VALID_LAYERS.contains(&ty) {
+            layers.insert(ty, layer);
+        }
 
         Self { layers }
     }

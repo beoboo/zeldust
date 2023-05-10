@@ -6,35 +6,39 @@ use bevy::{
     window::{PrimaryWindow, WindowResolution},
 };
 use bevy_common_assets::json::JsonAssetPlugin;
-use bevy_inspector_egui::quick::{ResourceInspectorPlugin, WorldInspectorPlugin};
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_prototype_lyon::prelude::*;
 use bevy_rapier2d::prelude::*;
 use enum_iterator::{all, Sequence};
 use parse_display::Display;
 
+use crate::collisions::handle_weapon_collisions;
+use crate::entities::Attackable;
 use crate::{
     camera::{move_camera, spawn_camera},
     constants::{SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE},
     entities::{
-        end_enemy_attack, end_player_attack, Enemy, move_enemy, Player, render_enemy, render_player,
-        spawn_enemy, spawn_player, update_depth,
+        end_enemy_attack, end_player_attack, move_enemy, render_enemy, render_player, spawn_enemy, spawn_player,
+        update_depth, Enemy, Player,
     },
     events::{SwitchMagic, SwitchWeapon},
     frames::TexturePack,
     input::handle_input,
-    magic::{Magic, spawn_magic, switch_magic},
+    magic::{spawn_magic, switch_magic, Magic},
     map::{LayerType, WorldMap},
     ui::{
-        change_magic_item, change_weapon_item, end_switch_magic, end_switch_weapon, MagicItemBox, spawn_ui,
+        change_magic_item, change_weapon_item, end_switch_magic, end_switch_weapon, spawn_ui, MagicItemBox,
         WeaponItemBox,
     },
     weapon::{spawn_weapon, switch_weapon, Weapon},
     widgets::WidgetsPlugin,
 };
+use crate::debug::{can_spawn, MAX_ENEMIES, MAX_TILES};
 
 mod camera;
 mod collisions;
 mod constants;
+mod debug;
 mod entities;
 mod events;
 mod frames;
@@ -124,7 +128,7 @@ fn main() {
         .add_plugin(ShapePlugin)
         .add_plugin(JsonAssetPlugin::<TexturePack>::new(&["json"]))
         .add_plugin(WidgetsPlugin)
-        .add_plugin(ResourceInspectorPlugin::<Weapon>::default())
+        // .add_plugin(ResourceInspectorPlugin::<Weapon>::default())
         .register_type::<Enemy>()
         .register_type::<MagicItemBox>()
         .register_type::<Player>()
@@ -186,33 +190,28 @@ fn main() {
 }
 
 fn load_ground(asset_server: Res<AssetServer>, mut assets: ResMut<LoadingAssets>) {
-    let handle = asset_server.load_untyped("map/ground.png");
-
-    match asset_server.get_load_state(handle.clone()) {
-        LoadState::Loaded => {
-            assets.handles.insert(handle, true);
-        }
-        _ => {
-            assets.handles.insert(handle, false);
-        }
-    }
+    load(&asset_server, &mut assets, "map/ground.png");
 }
 
 fn load_assets(asset_server: Res<AssetServer>, mut assets: ResMut<LoadingAssets>) {
     for ty in all::<GameAssetType>() {
         for asset in vec!["json", "png"] {
             let path = format!("textures/{ty}.{asset}");
-            let handle = asset_server.load_untyped(path);
-
-            match asset_server.get_load_state(handle.clone()) {
-                LoadState::Loaded => {
-                    assets.handles.insert(handle, true);
-                }
-                _ => {
-                    assets.handles.insert(handle, false);
-                }
-            }
+            load(&asset_server, &mut assets, path);
         }
+    }
+}
+
+fn load(asset_server: &Res<AssetServer>, assets: &mut LoadingAssets, path: impl Into<String>) {
+    let handle = asset_server.load_untyped(path.into());
+
+    match asset_server.get_load_state(handle.clone()) {
+        LoadState::Loaded => {
+            assets.handles.insert(handle, true);
+        },
+        _ => {
+            assets.handles.insert(handle, false);
+        },
     }
 }
 
@@ -339,7 +338,7 @@ fn spawn_tiles(
     textures: Res<Assets<TexturePack>>,
 ) {
     let window = window.single();
-    let max_enemies = 1;
+    let mut num_tiles = 0;
     let mut num_enemies = 0;
 
     // Spawn the world
@@ -351,13 +350,18 @@ fn spawn_tiles(
 
                 match cell {
                     0..=20 => {
+                        num_tiles += 1;
+                        if !can_spawn(num_tiles, MAX_TILES) {
+                            continue;
+                        }
                         spawn_tile(&mut commands, &window, &assets, &atlases, layer_type, cell, x, y);
-                    }
+                    },
                     390..=393 => {
-                        // num_enemies += 1;
-                        // if num_enemies > max_enemies {
-                        //     continue;
-                        // }
+                        num_enemies += 1;
+                        if !can_spawn(num_enemies, MAX_ENEMIES) {
+                            continue;
+                        }
+
                         spawn_enemy(
                             &mut commands,
                             &window,
@@ -369,18 +373,18 @@ fn spawn_tiles(
                             x,
                             y,
                         );
-                    }
+                    },
                     394 => {
                         spawn_player(&mut commands, &window, &assets, x, y);
-                    }
+                    },
                     395 => {
                         spawn_block(&mut commands, &window, &asset_server, layer_type, x, y);
-                    }
+                    },
                     _ => {
                         if cell != -1 {
                             info!("Not mapped yet: {}", cell);
                         }
-                    }
+                    },
                 }
             }
         }
@@ -409,28 +413,29 @@ fn spawn_tile(
 
     let collider_height = TILE_SIZE / 2.0;
 
-    let parent = commands
-        .spawn((
-            SpriteSheetBundle {
-                sprite: TextureAtlasSprite::new(index),
-                texture_atlas: atlas_handle.clone(),
-                transform: Transform::from_translation(from_position(x, y, window)),
-                ..Default::default()
-            },
-            RigidBody::Fixed,
-            Layer(*layer_type),
-        ))
-        .with_children(|parent| {
-            parent.spawn((
-                Collider::cuboid(rect.width() / 2.0, collider_height / 2.0),
-                Transform::from_xyz(0.0, -offset, 0.0),
-                ColliderDebugColor(Color::ALICE_BLUE),
-            ));
-        });
+    let mut parent = commands.spawn((
+        SpriteSheetBundle {
+            sprite: TextureAtlasSprite::new(index),
+            texture_atlas: atlas_handle.clone(),
+            transform: Transform::from_translation(from_position(x, y, window)),
+            ..Default::default()
+        },
+        RigidBody::Fixed,
+        ActiveEvents::COLLISION_EVENTS,
+        Layer(*layer_type),
+    ));
 
-    if layer_type.is_attaklable() {
-        parent.insert(Attackable);
-    }
+    parent.with_children(|parent| {
+        let mut child = parent.spawn((
+            Collider::cuboid(rect.width() / 2.0, collider_height / 2.0),
+            Transform::from_xyz(0.0, -offset, 0.0),
+            ColliderDebugColor(Color::ALICE_BLUE),
+        ));
+
+        if layer_type.is_attackable() {
+            child.insert(Attackable);
+        }
+    });
 }
 
 fn spawn_block(

@@ -4261,6 +4261,7 @@ dependencies = [
  "bevy_rapier2d",
  "csv",
  "enum-iterator",
+ "lazy_static",
  "parse-display",
  "rand",
  "serde",

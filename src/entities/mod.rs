@@ -87,6 +87,8 @@ impl Animation {
 
     pub fn play(&mut self, num_frames: usize) {
         self.num_frames = num_frames;
+        self.current_frame = 0;
+        self.timer.reset();
         self.timer.unpause()
     }
 
