@@ -7,6 +7,8 @@ pub struct Player {
     speed: f32,
 }
 
+pub struct PlayerPositionEvent(Position);
+
 impl Default for Player {
     fn default() -> Self {
         Self {
@@ -17,7 +19,8 @@ impl Default for Player {
 
 pub fn move_player(
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<(&Player, &mut Position)>
+    mut query: Query<(&Player, &mut Position)>,
+    mut position_writer: EventWriter<PlayerPositionEvent>,
 ) {
     let mut direction = Vec2::default();
     for key in keyboard_input.get_pressed() {
@@ -35,5 +38,16 @@ pub fn move_player(
         let (player, mut position) = query.single_mut();
         position.x += player.speed * direction.x;
         position.y += player.speed * direction.y;
+        position_writer.send(PlayerPositionEvent(*position))
+    }
+}
+
+pub fn move_camera(
+    mut query: Query<&mut Position, With<Camera>>,
+    mut position_reader: EventReader<PlayerPositionEvent>,
+) {
+    if let Some(player_position) = position_reader.iter().next() {
+        let mut camera_position = query.single_mut();
+        *camera_position = player_position.0;
     }
 }
