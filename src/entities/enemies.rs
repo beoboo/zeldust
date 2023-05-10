@@ -54,9 +54,9 @@ impl From<i32> for EnemyType {
     }
 }
 
-#[derive(Debug, Component, Reflect)]
+#[derive(Clone, Debug, Component, Reflect)]
 pub struct Enemy {
-    ty: EnemyType,
+    pub ty: EnemyType,
     status: Status,
     can_attack: bool,
     can_move: bool,

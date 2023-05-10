@@ -11,6 +11,7 @@ use crate::{
     GameAssetType,
     GameAssets,
 };
+use crate::entities::{Enemy, EnemyType};
 
 #[derive(Component)]
 pub struct ParticleEffectAnimation {
@@ -53,7 +54,8 @@ impl ParticleEffectAnimation {
 }
 
 pub enum ParticleEffect {
-    EnemyAttack(AttackType),
+    EnemyAttack(Enemy),
+    EnemyDeath(Enemy),
     Leaf,
 }
 
@@ -64,8 +66,13 @@ impl ParticleEffect {
                 let mut rng = rand::thread_rng();
                 format!("leaf{}", rng.gen_range(1..7))
             },
-            Self::EnemyAttack(attack_type) => format!("{attack_type}_attack"),
+            Self::EnemyAttack(enemy) => format!("{}_attack", enemy.attack_type()),
+            Self::EnemyDeath(enemy) => format!("{}_death", enemy.ty),
         }
+    }
+
+    pub fn is_flippable(&self) -> bool {
+        matches!(self, Self::Leaf)
     }
 
     pub fn num_frames(&self, name: &str) -> usize {
@@ -79,11 +86,17 @@ impl ParticleEffect {
                 "leaf6" => 11,
                 s => panic!("Unknown {s} particle"),
             },
-            Self::EnemyAttack(ty) => match ty {
+            Self::EnemyAttack(enemy) => match enemy.attack_type() {
                 AttackType::Claw => 4,
                 AttackType::Leaf => 7,
                 AttackType::Slash => 4,
                 AttackType::Thunder => 8,
+            },
+            Self::EnemyDeath(enemy) => match enemy.ty {
+                EnemyType::Bamboo => 2,
+                EnemyType::Raccoon => 6,
+                EnemyType::Spirit => 6,
+                EnemyType::Squid => 6,
             },
         }
     }
@@ -113,7 +126,15 @@ pub fn spawn_particles(
 
         let atlas_handle = assets.get(GameAssetType::Particles);
 
+        let flip_x = if particle.is_flippable() {
+            let mut rng = rand::thread_rng();
+
+            rng.gen_range(0..=1) == 1
+        } else {
+            false
+        };
         let mut sprite = TextureAtlasSprite::new(index);
+        sprite.flip_x = flip_x;
 
         commands.spawn((
             SpriteSheetBundle {

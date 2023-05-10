@@ -91,7 +91,7 @@ pub fn handle_player_collisions(
             .insert(HitTimer(Timer::new(HIT_DURATION, TimerMode::Once)));
 
         particle_effect_writer.send(EmitParticleEffect::new(
-            ParticleEffect::EnemyAttack(enemy.attack_type()),
+            ParticleEffect::EnemyAttack(enemy.clone()),
             transform.translation,
         ));
     }
@@ -121,7 +121,14 @@ pub fn handle_weapon_collisions(
 
             if remaining_health == 0 {
                 let transform = parent_q.get(parent.get()).expect("Parent must exist");
-                particle_effect_writer.send(EmitParticleEffect::new(ParticleEffect::Leaf, transform.translation));
+
+                let effect = if let Ok((enemy, _, _)) = enemy_q.get_mut(parent.get()) {
+                    ParticleEffect::EnemyDeath(enemy.clone())
+                } else {
+                    ParticleEffect::Leaf
+                };
+
+                particle_effect_writer.send(EmitParticleEffect::new(effect, transform.translation));
                 commands.entity(parent.get()).despawn_recursive();
             } else {
                 // If it's an enemy, bump it back
