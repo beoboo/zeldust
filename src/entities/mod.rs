@@ -170,3 +170,15 @@ pub fn render_animation(
         sprite.index = index + frame;
     }
 }
+
+pub fn from_position(x: f32, y: f32, window: &Window) -> Vec3 {
+    fn convert(pos: f32, bound_dim: f32) -> f32 {
+        pos - (bound_dim / 2.)
+    }
+
+    Vec3::new(
+        convert(x, window.width()),
+        -convert(y, window.height()),
+        convert(y, window.height()) + 1000.0,
+    )
+}

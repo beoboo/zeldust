@@ -4,8 +4,8 @@ use crate::LayerType;
 
 pub const DEBUG_WORLD: bool = false;
 pub const DEBUG_PHYSICS: bool = false;
-pub const MAX_ENEMIES: i32 = -1;
-pub const MAX_TILES: i32 = -1;
+pub const MAX_ENEMIES: i32 = 0;
+pub const MAX_TILES: i32 = 0;
 
 lazy_static! {
     pub static ref VALID_LAYERS: Vec<LayerType> = vec![

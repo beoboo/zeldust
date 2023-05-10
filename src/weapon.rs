@@ -19,6 +19,7 @@ pub struct PlayerWeapon;
 
 #[derive(Clone, Copy, Debug, Default, Display, Component, Resource, Reflect)]
 #[display(style = "snake_case")]
+#[reflect(Resource)]
 pub enum Weapon {
     Axe = 0,
     Lance = 1,

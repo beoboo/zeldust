@@ -2,8 +2,22 @@ use bevy::prelude::*;
 use parse_display::Display;
 
 use crate::{
-    constants::SWITCH_ITEM_DURATION,
-    entities::Player,
+    constants::{
+        BACK_COLOR,
+        BAR_HEIGHT,
+        BORDER_COLOR,
+        BORDER_WIDTH,
+        ENERGY_BAR_WIDTH,
+        ENERGY_COLOR,
+        FONT_SIZE,
+        HEALTH_BAR_WIDTH,
+        HEALTH_COLOR,
+        ITEM_BOX_SIZE,
+        MARGIN,
+        PADDING,
+        SWITCH_ITEM_DURATION,
+    },
+    entities::{Player, PlayerStat},
     frames::TexturePack,
     magic::Magic,
     weapon::Weapon,
@@ -11,19 +25,6 @@ use crate::{
     GameAssetType,
     GameAssets,
 };
-
-const MARGIN: f32 = 10.;
-const PADDING: f32 = 2.;
-const HEALTH_BAR_WIDTH: f32 = 200.;
-const ENERGY_BAR_WIDTH: f32 = 140.;
-const BAR_HEIGHT: f32 = 20.;
-const ENERGY_COLOR: Color = Color::rgba(0., 0., 1., 0.9);
-const HEALTH_COLOR: Color = Color::rgba(1., 0., 0., 0.9);
-const BACK_COLOR: Color = Color::rgba(0.2, 0.2, 0.2, 0.9);
-const BORDER_COLOR: Color = Color::rgb(0.3, 0.3, 0.3);
-const BORDER_WIDTH: f32 = 3.;
-const FONT_SIZE: f32 = 18.0;
-const ITEM_BOX_SIZE: f32 = 80.0;
 
 #[derive(Component, Resource, Deref, DerefMut)]
 pub struct SwitchMagicTimer(pub Timer);
@@ -399,7 +400,7 @@ pub fn update_health_ui(player_q: Query<&Player>, mut health_q: Query<&mut Style
 
     let mut health = health_q.single_mut();
 
-    health.size.width = Val::Px(player.health.ratio() * HEALTH_BAR_WIDTH);
+    health.size.width = Val::Px(player.stats.ratio_by_limit_of(PlayerStat::Health) * HEALTH_BAR_WIDTH);
 }
 
 pub fn update_energy_ui(player_q: Query<&Player>, mut energy_q: Query<&mut Style, With<EnergyBar>>) {
@@ -407,7 +408,7 @@ pub fn update_energy_ui(player_q: Query<&Player>, mut energy_q: Query<&mut Style
 
     let mut energy = energy_q.single_mut();
 
-    energy.size.width = Val::Px(player.energy.ratio() * ENERGY_BAR_WIDTH);
+    energy.size.width = Val::Px(player.stats.ratio_by_limit_of(PlayerStat::Energy) * ENERGY_BAR_WIDTH);
 }
 
 pub fn update_xp_ui(player_q: Query<&Player>, mut xp_q: Query<&mut Text, With<Experience>>) {

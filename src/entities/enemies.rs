@@ -7,9 +7,18 @@ use parse_display::Display;
 use crate::{
     collisions::{ENEMY_ATTACK_COLLISION_GROUP, ENEMY_MOVE_COLLISION_GROUP},
     constants::{ANIMATION_DURATION, ATTACK_DURATION, SPEED, TILE_SIZE},
-    entities::{render_animation, AnimatedEntity, Animation, AttackTimer, Attackable, HitTimer, Player, Status},
+    entities::{
+        from_position,
+        render_animation,
+        AnimatedEntity,
+        Animation,
+        AttackTimer,
+        Attackable,
+        HitTimer,
+        Player,
+        Status,
+    },
     frames::TexturePack,
-    from_position,
     GameAssetType,
     GameAssets,
 };

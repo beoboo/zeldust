@@ -18,6 +18,7 @@ pub struct PlayerMagic;
 
 #[derive(Clone, Copy, Debug, Default, Display, Component, Resource, Reflect)]
 #[display(style = "snake_case")]
+#[reflect(Resource)]
 pub enum Magic {
     #[default]
     Flame = 0,
@@ -144,6 +145,6 @@ pub fn recover_energy(time: Res<Time>, mut player_q: Query<(&mut Player, &mut En
     timer.0.tick(time.delta());
 
     if timer.0.finished() {
-        player.energy += 1;
+        player.recover_energy(1);
     }
 }

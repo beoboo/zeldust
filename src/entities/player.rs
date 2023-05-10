@@ -1,13 +1,15 @@
-use std::time::Duration;
+use std::{collections::HashMap, time::Duration};
 
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
+use enum_iterator::{all, Sequence};
+use parse_display::Display;
 
 use crate::{
-    clamped::ClampedU32,
     collisions::PLAYER_MOVE_COLLISION_GROUP,
-    constants::{ANIMATION_DURATION, ATTACK_DURATION, ENERGY_RECOVERY_DURATION, TILE_SIZE},
+    constants::{ANIMATION_DURATION, ATTACK_DURATION, ENERGY_RECOVERY_DURATION, STARTING_XP, TILE_SIZE},
     entities::{
+        from_position,
         render_animation,
         AnimatedEntity,
         Animation,
@@ -19,39 +21,145 @@ use crate::{
         Status,
     },
     frames::TexturePack,
-    from_position,
+    stats::Stat,
     weapon::PlayerWeapon,
     GameAssetType,
     GameAssets,
 };
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Display, Sequence, Reflect, FromReflect, Component)]
+pub enum PlayerStat {
+    Damage,
+    Energy,
+    Health,
+    Magic,
+    Speed,
+}
+
+impl PlayerStat {
+    pub fn start(&self) -> u32 {
+        match self {
+            Self::Damage => 10,
+            Self::Energy => 48,
+            Self::Health => 50,
+            Self::Magic => 4,
+            Self::Speed => 5,
+        }
+    }
+
+    pub fn limit(&self) -> u32 {
+        match self {
+            Self::Damage => 10,
+            Self::Energy => 60,
+            Self::Health => 100,
+            Self::Magic => 4,
+            Self::Speed => 5,
+        }
+    }
+
+    pub fn max(&self) -> u32 {
+        match self {
+            Self::Damage => 20,
+            Self::Energy => 140,
+            Self::Health => 300,
+            Self::Magic => 10,
+            Self::Speed => 10,
+        }
+    }
+
+    pub fn cost(&self) -> u32 {
+        match self {
+            Self::Damage => 100,
+            Self::Energy => 100,
+            Self::Health => 100,
+            Self::Magic => 100,
+            Self::Speed => 100,
+        }
+    }
+}
+
+impl From<u32> for PlayerStat {
+    fn from(value: u32) -> Self {
+        match value {
+            0 => PlayerStat::Damage,
+            1 => PlayerStat::Energy,
+            2 => PlayerStat::Health,
+            3 => PlayerStat::Magic,
+            _ => PlayerStat::Speed,
+        }
+    }
+}
+
+#[derive(Reflect)]
+pub struct PlayerStats(HashMap<PlayerStat, Stat>);
+
+impl Default for PlayerStats {
+    fn default() -> Self {
+        let stats = all::<PlayerStat>()
+            .map(|s| (s, Stat::new(s.start(), s.limit(), s.max(), s.cost())))
+            .collect::<HashMap<_, _>>();
+
+        Self(stats)
+    }
+}
+
+impl PlayerStats {
+    pub fn get(&self, ty: PlayerStat) -> &Stat {
+        &self.0[&ty]
+    }
+
+    pub fn get_mut(&mut self, ty: PlayerStat) -> &mut Stat {
+        self.0.get_mut(&ty).unwrap()
+    }
+
+    pub fn limit(&self, ty: PlayerStat) -> u32 {
+        self.get(ty).limit()
+    }
+
+    pub fn max(&self, ty: PlayerStat) -> u32 {
+        self.get(ty).max()
+    }
+
+    pub fn value(&self, ty: PlayerStat) -> u32 {
+        self.get(ty).value()
+    }
+
+    pub fn cost(&self, ty: PlayerStat) -> u32 {
+        self.get(ty).cost()
+    }
+
+    pub fn ratio_by_limit_of(&self, ty: PlayerStat) -> f32 {
+        self.0[&ty].ratio_by_limit()
+    }
+
+    pub fn set(&mut self, ty: PlayerStat, val: u32) {
+        self.get_mut(ty).set(val)
+    }
+
+    pub fn upgrade(&mut self, ty: PlayerStat) {
+        self.get_mut(ty).upgrade();
+    }
+}
+
 #[derive(Component, Reflect)]
 pub struct Player {
-    pub health: ClampedU32,
-    pub energy: ClampedU32,
-    pub speed: ClampedU32,
-    pub damage: ClampedU32,
-    pub magic: ClampedU32,
     pub xp: u32,
     pub status: Status,
     pub direction: Direction,
     pub frame: usize,
     pub can_cast_spell: bool,
+    pub stats: PlayerStats,
 }
 
 impl Default for Player {
     fn default() -> Self {
         Self {
-            health: ClampedU32::new(50, 100),
-            energy: ClampedU32::new(48, 60),
-            speed: ClampedU32::new(5, 5),
-            damage: ClampedU32::new(10, 10),
-            magic: ClampedU32::new(4, 4),
-            xp: 500,
+            xp: STARTING_XP,
             status: Status::Idle,
             direction: Direction::Down,
             frame: 0,
             can_cast_spell: true,
+            stats: PlayerStats::default(),
         }
     }
 }
@@ -62,7 +170,7 @@ impl Player {
     }
 
     pub fn damage(&self) -> u32 {
-        self.damage.value()
+        self.stats.limit(PlayerStat::Damage)
     }
 
     pub fn is_moving(&self) -> bool {
@@ -78,12 +186,15 @@ impl Player {
     }
 
     pub fn hit(&mut self, damage: u32) {
-        self.health = self.health - damage;
+        let health = self.stats.value(PlayerStat::Health);
+        self.stats.set(PlayerStat::Health, health - damage);
     }
 
     pub fn cast_spell(&mut self, cost: u32) -> bool {
-        if self.energy.value() >= cost {
-            self.energy -= cost;
+        let energy = self.stats.value(PlayerStat::Energy);
+
+        if energy >= cost {
+            self.stats.set(PlayerStat::Energy, energy - cost);
             true
         } else {
             false
@@ -91,7 +202,33 @@ impl Player {
     }
 
     pub fn heal(&mut self, strength: u32) {
-        self.health += strength;
+        let health = self.stats.value(PlayerStat::Health);
+        self.stats.set(PlayerStat::Health, health + strength);
+    }
+
+    pub fn recover_energy(&mut self, amount: u32) {
+        let energy = self.stats.value(PlayerStat::Energy);
+        self.stats.set(PlayerStat::Energy, energy + amount);
+    }
+
+    pub fn value_by(&self, stat: PlayerStat) -> u32 {
+        self.stats.value(stat)
+    }
+
+    pub fn cost_by(&self, stat: PlayerStat) -> u32 {
+        self.stats.cost(stat)
+    }
+
+    pub fn limit_by(&self, stat: PlayerStat) -> u32 {
+        self.stats.limit(stat)
+    }
+
+    pub fn max_by(&self, stat: PlayerStat) -> u32 {
+        self.stats.max(stat)
+    }
+
+    pub fn upgrade(&mut self, stat: PlayerStat) {
+        self.stats.upgrade(stat);
     }
 
     pub fn add_xp(&mut self, xp: u32) {

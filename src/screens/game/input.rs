@@ -5,19 +5,22 @@ use bevy_rapier2d::prelude::*;
 
 use crate::{
     constants::SPEED,
-    entities::{Animation, AttackTimer, CastSpellTimer, Direction, Player, Status},
+    entities::{Animation, AttackTimer, CastSpellTimer, Direction, Player, PlayerStat, Status},
     events::{SwitchMagic, SwitchWeapon},
+    screens::GameMode,
     weapon::Weapon,
+    AppState,
     StaticCollider,
 };
 
 pub fn handle_input(
     mut commands: Commands,
-    keyboard_input: Res<Input<KeyCode>>,
+    mut keyboard_input: ResMut<Input<KeyCode>>,
     mut query: Query<(Entity, &mut Player, &mut Velocity, &mut Animation), Without<StaticCollider>>,
     mut switch_weapon: EventWriter<SwitchWeapon>,
     mut switch_magic: EventWriter<SwitchMagic>,
     weapon: Res<Weapon>,
+    mut game_mode: ResMut<GameMode>,
 ) {
     let mut vec = Vec2::default();
 
@@ -77,16 +80,21 @@ pub fn handle_input(
             KeyCode::E => {
                 switch_magic.send(SwitchMagic);
             },
+            KeyCode::M => {
+                *game_mode = GameMode::Upgrading;
+            },
             _ => (),
         }
     }
+
+    keyboard_input.reset(KeyCode::M);
 
     if player.status != status {
         player.status = status;
         animation.stop();
 
         if player.is_moving() {
-            velocity.linvel = vec * player.speed.value() as f32 * SPEED;
+            velocity.linvel = vec * player.stats.limit(PlayerStat::Speed) as f32 * SPEED;
         } else {
             velocity.linvel = Vec2::ZERO;
         }
