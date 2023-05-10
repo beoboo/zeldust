@@ -1,15 +1,15 @@
+use std::time::Duration;
+
 use bevy::math::Vec3Swizzles;
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use parse_display::Display;
-use std::time::Duration;
 
 use crate::constants::{FPS, TILE_SIZE};
-use crate::entities::Direction;
 use crate::entities::Status;
 use crate::entities::{AnimationTimer, Player};
 use crate::frames::TexturePack;
-use crate::{from_position, GameAssetType, GameAssets, Size};
+use crate::{from_position, GameAssetType, GameAssets};
 
 pub enum AttackType {
     Slash,

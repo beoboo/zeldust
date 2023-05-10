@@ -8,7 +8,7 @@ use crate::constants::TILE_SIZE;
 use crate::entities::{Direction, Status};
 use crate::frames::TexturePack;
 use crate::weapon::PlayerWeapon;
-use crate::{from_position, GameAssetType, GameAssets, Size};
+use crate::{from_position, GameAssetType, GameAssets};
 
 #[derive(Component, Deref)]
 pub struct AttackTimer(pub Timer);

@@ -1,9 +1,9 @@
 use std::time::Duration;
 
-use crate::constants::FPS;
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
+use crate::constants::FPS;
 use crate::entities::Direction;
 use crate::entities::{AnimationTimer, AttackTimer, Player, Status};
 use crate::events::{SwitchMagic, SwitchWeapon};
