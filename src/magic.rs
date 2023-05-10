@@ -1,16 +1,13 @@
 use bevy::prelude::*;
 use parse_display::Display;
 use rand::Rng;
-use std::thread::current;
 
+use bevy_kira_audio::{Audio, AudioControl};
 use crate::{
-    collisions::{MAGIC_COLLISION_GROUP, OBJECTS_COLLISION_GROUP, PLAYER_MOVE_COLLISION_GROUP},
     constants::TILE_SIZE,
     entities::{EnergyRecoveryTimer, Player},
     events::{EmitParticleEffect, SwitchMagic},
-    frames::TexturePack,
-    particles::{spawn_particles, ParticleEffect},
-    GameAssets,
+    particles::ParticleEffect,
 };
 
 #[derive(Component)]
@@ -40,6 +37,10 @@ impl Magic {
         }
     }
 
+    pub fn sound(&self) -> String {
+        format!("audio/{self}.wav")
+    }
+
     pub fn next(&self) -> Self {
         let index = *self as u8;
         let next = (index + 1) % 2;
@@ -61,6 +62,8 @@ pub fn cast_spell(
     current_magic: Res<Magic>,
     mut player_q: Query<(&mut Player, &Transform)>,
     mut particle_effect_writer: EventWriter<EmitParticleEffect>,
+    asset_server: Res<AssetServer>,
+    audio: Res<Audio>,
 ) {
     let (mut player, transform) = player_q.single_mut();
 
@@ -100,37 +103,7 @@ pub fn cast_spell(
         }
     }
 
-    // let direction = player.direction;
-    // let magic = *current_magic;
-    //
-    // let name = format!("{magic}_{direction}.png");
-    // let handle = asset_server.load("textures/magics.json");
-    // let pack = textures.get(&handle).expect("Texture pack must exist");
-    // let index = pack.index_of(&name);
-    // let frame = &pack.frames[&name];
-    //
-    // let y_offset = TILE_SIZE - (TILE_SIZE - frame.frame.h) / 2.0 - 4.0;
-    // let x_offset = (TILE_SIZE + frame.frame.w) / 2.0;
-    //
-    // let translation = match direction {
-    //     Direction::Down => Vec2::new(0.0, -y_offset),
-    //     Direction::Left => Vec2::new(-x_offset, -TILE_SIZE / 4.0),
-    //     Direction::Right => Vec2::new(x_offset, -TILE_SIZE / 4.0),
-    //     Direction::Up => Vec2::new(0.0, y_offset),
-    // };
-    //
-    // commands.entity(entity).with_children(|parent| {
-    //     parent.spawn((
-    //         SpriteSheetBundle {
-    //             sprite: TextureAtlasSprite::new(index),
-    //             texture_atlas: assets.magics.clone(),
-    //             transform: Transform::from_translation(translation.extend(0.0)),
-    //             ..Default::default()
-    //         },
-    //         *current_magic,
-    //         PlayerMagic,
-    //     ));
-    // });
+    audio.play(asset_server.load(current_magic.sound()));
 }
 
 pub fn switch_magic(mut current_magic: ResMut<Magic>, mut reader: EventReader<SwitchMagic>) {

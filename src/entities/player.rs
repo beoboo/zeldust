@@ -187,7 +187,13 @@ impl Player {
 
     pub fn hit(&mut self, damage: u32) {
         let health = self.stats.value(PlayerStat::Health);
-        self.stats.set(PlayerStat::Health, health - damage);
+        let health = if health > damage {
+            health - damage
+        } else {
+            0;
+        };
+
+        self.stats.set(PlayerStat::Health, health);
     }
 
     pub fn cast_spell(&mut self, cost: u32) -> bool {

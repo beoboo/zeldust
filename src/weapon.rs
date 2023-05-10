@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use bevy_kira_audio::{Audio, AudioControl};
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use parse_display::Display;
@@ -80,6 +81,7 @@ pub fn spawn_weapon(
     asset_server: Res<AssetServer>,
     assets: Res<GameAssets>,
     textures: Res<Assets<TexturePack>>,
+    audio: Res<Audio>,
 ) {
     let Err(_) = weapon_q.get_single() else {
         return;
@@ -126,6 +128,8 @@ pub fn spawn_weapon(
             ColliderDebugColor(Color::GOLD),
         ));
     });
+
+    audio.play(asset_server.load("audio/sword.wav")).with_volume(0.4);
 }
 
 pub fn switch_weapon(mut current_weapon: ResMut<Weapon>, mut reader: EventReader<SwitchWeapon>) {

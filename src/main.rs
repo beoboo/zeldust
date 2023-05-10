@@ -7,11 +7,10 @@ use bevy::{
 };
 use bevy_common_assets::json::JsonAssetPlugin;
 use bevy_inspector_egui::{
-    bevy_egui,
     bevy_egui::{EguiContext, EguiPlugin},
-    bevy_inspector,
-    egui,
+    bevy_inspector, egui,
 };
+use bevy_kira_audio::{AudioPlugin, Audio, AudioControl};
 use bevy_prototype_lyon::prelude::*;
 use bevy_rapier2d::prelude::*;
 use enum_iterator::{all, Sequence};
@@ -22,14 +21,8 @@ use crate::{
     debug::{DEBUG_PHYSICS, DEBUG_WORLD},
     entities::{Attackable, Enemy, Player},
     events::{
-        DamageAttackable,
-        EmitParticleEffect,
-        KillAttackable,
-        MagicCollision,
-        PlayerCollision,
-        SwitchMagic,
-        SwitchWeapon,
-        WeaponCollision,
+        DamageAttackable, EmitParticleEffect, KillAttackable, MagicCollision, PlayerCollision, SwitchMagic,
+        SwitchWeapon, WeaponCollision,
     },
     frames::TexturePack,
     magic::Magic,
@@ -127,6 +120,7 @@ fn main() {
         }),
         ..default()
     }))
+    .add_plugin(AudioPlugin)
     .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
     .add_plugin(ShapePlugin)
     .add_plugin(JsonAssetPlugin::<TexturePack>::new(&["json"]))
@@ -174,7 +168,11 @@ fn main() {
     app.run();
 }
 
-fn load_map(mut commands: Commands) {
+fn load_map(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    audio: Res<Audio>,
+) {
     // commands.insert_resource(WorldMap::debug_grass());
     commands.insert_resource(
         WorldMap::new()
@@ -183,6 +181,8 @@ fn load_map(mut commands: Commands) {
             .load_layer(LayerType::Objects, "assets/map/map_Objects.csv")
             .load_layer(LayerType::Entities, "assets/map/map_Entities.csv"),
     );
+
+    // audio.play(asset_server.load("audio/main.ogg")).looped().with_playback_rate(1.2);
 }
 
 fn load_ground(asset_server: Res<AssetServer>, mut assets: ResMut<LoadingAssets>) {

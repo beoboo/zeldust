@@ -33,13 +33,15 @@ pub enum AttackType {
 }
 
 impl AttackType {
-    pub fn sound(&self) -> &str {
-        match self {
+    pub fn sound(&self) -> String {
+        let sound = match self {
             AttackType::Slash => "slash",
             AttackType::Claw => "claw",
             AttackType::Thunder => "fireball",
             AttackType::Leaf => "slash",
-        }
+        };
+
+        format!("audio/attack/{sound}.wav")
     }
 }
 
@@ -269,6 +271,7 @@ pub fn move_enemy(
     mut commands: Commands,
     player_q: Query<&Transform, With<Player>>,
     mut enemy_q: Query<(Entity, &mut Enemy, &Transform, &mut Velocity, &mut Animation)>,
+
 ) {
     let player_transform = player_q.single();
 

@@ -1,4 +1,5 @@
 use bevy::{log, math::Vec3Swizzles, prelude::*};
+use bevy_kira_audio::{Audio, AudioControl};
 use bevy_rapier2d::prelude::*;
 use lazy_static::lazy_static;
 
@@ -162,7 +163,6 @@ fn attack_attackable(
 ) {
     if let Ok((entity, mut attackable)) = attackable_q.get_mut(*attacked) {
         let remaining_health = attackable.hit(player.damage() + damage);
-        println!("Remaining health: {remaining_health}");
 
         if remaining_health == 0 {
             kill_attackable_writer.send(KillAttackable(entity.clone()));
@@ -180,6 +180,8 @@ pub fn kill_attackable(
     mut enemy_q: Query<&mut Enemy>,
     mut kill_attackable_reader: EventReader<KillAttackable>,
     mut particle_effect_writer: EventWriter<EmitParticleEffect>,
+    asset_server: Res<AssetServer>,
+    audio: Res<Audio>,
 ) {
     let mut player = player_q.single_mut();
 
@@ -192,12 +194,12 @@ pub fn kill_attackable(
 
         let effect = if let Ok(enemy) = enemy_q.get_mut(event.0) {
             player.add_xp(enemy.xp());
+            audio.play(asset_server.load("audio/death.wav")).with_volume(0.4);
             ParticleEffect::EnemyDeath(enemy.clone())
         } else {
             ParticleEffect::Leaf
         };
 
-        println!("Killing {:?}", event.0);
         particle_effect_writer.send(EmitParticleEffect::new(effect, transform.translation));
         commands.entity(event.0).despawn_recursive();
     }
@@ -209,6 +211,8 @@ pub fn damage_attackable(
     mut attackable_q: Query<Entity, With<Attackable>>,
     mut enemy_q: Query<(&mut Enemy, &Transform, &mut Velocity)>,
     mut damage_attackable_reader: EventReader<DamageAttackable>,
+    asset_server: Res<AssetServer>,
+    audio: Res<Audio>,
 ) {
     let player_transform = player_q.single();
 
@@ -224,6 +228,8 @@ pub fn damage_attackable(
             velocity.linvel = -direction.xy().normalize_or_zero() * enemy.resistance() * SPEED;
 
             enemy.hit();
+            audio.play(asset_server.load("audio/hit.wav")).with_volume(0.4);
+
             commands
                 .entity(event.0)
                 .insert(HitTimer(Timer::new(HIT_DURATION, TimerMode::Once)));
@@ -239,18 +245,21 @@ pub fn handle_player_collisions(
     enemy_q: Query<&Enemy>,
     mut player_collision_reader: EventReader<PlayerCollision>,
     mut particle_effect_writer: EventWriter<EmitParticleEffect>,
+    asset_server: Res<AssetServer>,
+    audio: Res<Audio>,
 ) {
     let (mut player, transform) = player_q.single_mut();
 
     for event in player_collision_reader.iter() {
-        println!("player collision");
         let Ok(enemy) = enemy_q.get(event.other) else {
             // Not an enemy, bailing out...
             continue;
         };
-        println!("enemy collision");
 
         player.hit(enemy.damage());
+        audio
+            .play(asset_server.load(enemy.attack_type().sound()));
+
         commands
             .entity(event.player)
             .insert(HitTimer(Timer::new(HIT_DURATION, TimerMode::Once)));
