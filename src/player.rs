@@ -7,6 +7,7 @@ use parse_display::Display;
 
 use crate::{from_position, from_translation, GameAssets, MapSize, Position, Size, StaticCollider};
 use crate::constants::{ATTACK_COOLDOWN, TILE_SIZE};
+use crate::events::SwitchWeapon;
 use crate::frames::TexturePack;
 
 #[derive(Component, Deref)]
@@ -34,8 +35,37 @@ impl Default for Player {
     }
 }
 
-#[derive(Component)]
-pub struct Weapon;
+#[derive(Clone, Copy, Debug, Default, Display, Component, Resource)]
+#[display(style = "snake_case")]
+pub enum Weapon {
+    Axe = 0,
+    Lance = 1,
+    Rapier = 2,
+    Sai = 3,
+    #[default]
+    Sword = 4,
+}
+
+impl Weapon {
+    pub fn next(&self) -> Self {
+        let index = *self as u8;
+        let next = (index + 1) % 5;
+
+        Self::from(next)
+    }
+}
+
+impl From<u8> for Weapon {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => Self::Axe,
+            1 => Self::Lance,
+            2 => Self::Rapier,
+            3 => Self::Sai,
+            _ => Self::Sword,
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, Display, PartialEq, Reflect)]
 #[display(style = "snake_case")]
@@ -100,6 +130,7 @@ pub fn handle_input(
     mut commands: Commands,
     keyboard_input: Res<Input<KeyCode>>,
     mut query: Query<(Entity, &mut Player, &mut Velocity, &mut AnimationTimer), Without<StaticCollider>>,
+    mut switch_weapon: EventWriter<SwitchWeapon>,
 ) {
     let mut vec = Vec2::default();
 
@@ -136,6 +167,9 @@ pub fn handle_input(
             KeyCode::Space | KeyCode::LControl => {
                 player.is_attacking = true;
                 commands.entity(entity).insert(AttackTimer(Timer::new(ATTACK_COOLDOWN, TimerMode::Once)));
+            }
+            KeyCode::Q => {
+                switch_weapon.send(SwitchWeapon);
             }
             _ => ()
         }
@@ -180,11 +214,9 @@ pub fn update_player_position(
 }
 
 pub fn render_player(
-    mut commands: Commands,
     time: Res<Time>,
     mut query: Query<(&Player, &Transform, &mut AnimationTimer, &mut TextureAtlasSprite)>,
     asset_server: Res<AssetServer>,
-    assets: Res<GameAssets>,
     textures: Res<Assets<TexturePack>>,
 ) {
     let (player, transform, mut timer, mut sprite) = query.single_mut();
@@ -225,6 +257,7 @@ pub fn render_player(
 
 pub fn spawn_weapon(
     mut commands: Commands,
+    current_weapon: Res<Weapon>,
     player_q: Query<(Entity, &Player)>,
     weapon_q: Query<Entity, With<Weapon>>,
     asset_server: Res<AssetServer>,
@@ -241,8 +274,8 @@ pub fn spawn_weapon(
         return;
     }
 
-    let weapon = "sword";
     let direction = player.direction;
+    let weapon = *current_weapon;
 
     let name = format!("{direction}_{weapon}.png");
     let handle = asset_server.load("textures/weapons.json");
@@ -253,16 +286,16 @@ pub fn spawn_weapon(
     let translation = match direction {
         Direction::Down => {
             Vec2::new(0.0, -(TILE_SIZE - (TILE_SIZE - frame.frame.h) / 2.0 - 4.0))
-        },
+        }
         Direction::Left => {
             Vec2::new(-(TILE_SIZE + frame.frame.w) / 2.0, -TILE_SIZE / 4.0)
-        },
+        }
         Direction::Right => {
             Vec2::new((TILE_SIZE + frame.frame.w) / 2.0, -TILE_SIZE / 4.0)
-        },
+        }
         Direction::Up => {
             Vec2::new(0.0, (TILE_SIZE - (TILE_SIZE - frame.frame.h) / 2.0 - 4.0))
-        },
+        }
     };
 
     commands.entity(entity).with_children(|parent| {
@@ -273,7 +306,7 @@ pub fn spawn_weapon(
                 transform: Transform::from_translation(translation.extend(0.0)),
                 ..Default::default()
             },
-            Weapon
+            *current_weapon,
         ));
     });
 }
@@ -290,9 +323,15 @@ pub fn end_attack(
         if timer.0.finished() {
             player.is_attacking = false;
             commands.entity(entity).remove::<AttackTimer>();
-            // let weapon = weapon_q.single();
-            //
-            // commands.entity(weapon).despawn();
+            let weapon = weapon_q.single();
+
+            commands.entity(weapon).despawn();
         }
+    }
+}
+
+pub fn switch_weapon(mut current_weapon: ResMut<Weapon>, mut reader: EventReader<SwitchWeapon>) {
+    for _ in reader.iter() {
+        *current_weapon = current_weapon.next();
     }
 }

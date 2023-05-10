@@ -9,10 +9,11 @@ use bevy_prototype_lyon::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 use crate::constants::{CAMERA_SCALE, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE};
+use crate::events::SwitchWeapon;
 use crate::frames::TexturePack;
 // use crate::collisions::handle_collisions;
 use crate::map::{LayerType, WorldMap};
-use crate::player::{end_attack, handle_input, move_camera, Player, PlayerPositionEvent, render_player, spawn_player, spawn_weapon, update_player_position};
+use crate::player::{end_attack, handle_input, move_camera, Player, PlayerPositionEvent, render_player, spawn_player, spawn_weapon, switch_weapon, update_player_position, Weapon};
 
 mod constants;
 mod player;
@@ -21,6 +22,7 @@ mod layer;
 mod ui;
 mod collisions;
 mod frames;
+mod events;
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Hash, States)]
 pub enum AppState {
@@ -95,14 +97,16 @@ fn main() {
         .add_plugin(JsonAssetPlugin::<TexturePack>::new(&["json"]))
         .register_type::<Position>()
         .register_type::<Player>()
+        .add_event::<SwitchWeapon>()
         .insert_resource(ClearColor(Color::rgb(0.04, 0.04, 0.04)))
         .insert_resource(
             WorldMap::new()
-                // .load_layer(LayerType::Blocks, "assets/map/map_FloorBlocks.csv")
-                // .load_layer(LayerType::Grass, "assets/map/map_Grass.csv")
-                // .load_layer(LayerType::Objects, "assets/map/map_Objects.csv")
+            .load_layer(LayerType::Blocks, "assets/map/map_FloorBlocks.csv")
+            .load_layer(LayerType::Grass, "assets/map/map_Grass.csv")
+            .load_layer(LayerType::Objects, "assets/map/map_Objects.csv")
         )
         .init_resource::<LoadingAssets>()
+        .init_resource::<Weapon>()
         .add_state::<AppState>()
         .add_systems((load_ground, load_assets, finish_loading).in_set(OnUpdate(AppState::Loading)))
         .add_systems((
@@ -122,6 +126,7 @@ fn main() {
             move_camera,
             render_player,
             spawn_weapon,
+            switch_weapon,
             end_attack,
             // handle_collisions,
         ).in_set(OnUpdate(AppState::Playing)))
