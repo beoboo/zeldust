@@ -14,13 +14,14 @@ use parse_display::Display;
 
 use crate::{
     camera::{move_camera, spawn_camera},
-    collisions::{handle_weapon_collisions, OBJECTS_COLLISION_GROUP},
+    collisions::{handle_collisions, handle_player_collisions, handle_weapon_collisions, OBJECTS_COLLISION_GROUP},
     constants::{SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE},
     debug::{can_spawn, DEBUG_PHYSICS, MAX_ENEMIES, MAX_TILES},
     entities::{
         end_enemy_attack,
-        end_enemy_hit,
         end_player_attack,
+        handle_enemy_hit,
+        handle_player_hit,
         move_enemy,
         render_enemy,
         render_player,
@@ -31,7 +32,7 @@ use crate::{
         Enemy,
         Player,
     },
-    events::{SwitchMagic, SwitchWeapon},
+    events::{PlayerCollision, SwitchMagic, SwitchWeapon, WeaponCollision},
     frames::TexturePack,
     input::handle_input,
     magic::{spawn_magic, switch_magic, Magic},
@@ -42,6 +43,8 @@ use crate::{
         end_switch_magic,
         end_switch_weapon,
         spawn_ui,
+        update_energy_ui,
+        update_health_ui,
         MagicItemBox,
         WeaponItemBox,
     },
@@ -141,12 +144,15 @@ fn main() {
         .add_plugin(JsonAssetPlugin::<TexturePack>::new(&["json"]))
         .add_plugin(WidgetsPlugin)
         // .add_plugin(ResourceInspectorPlugin::<Weapon>::default())
+        .register_type::<Attackable>()
         .register_type::<Enemy>()
         .register_type::<MagicItemBox>()
         .register_type::<Player>()
         .register_type::<WeaponItemBox>()
         .add_event::<SwitchMagic>()
         .add_event::<SwitchWeapon>()
+        .add_event::<PlayerCollision>()
+        .add_event::<WeaponCollision>()
         .insert_resource(ClearColor(Color::hex("70deee").unwrap()))
         .insert_resource(
             WorldMap::new()
@@ -160,7 +166,7 @@ fn main() {
         .init_resource::<Magic>()
         .add_state::<AppState>()
         .add_systems((load_ground, load_assets, finish_loading).in_set(OnUpdate(AppState::Loading)))
-        .add_systems((prepare_assets, ).in_schedule(OnExit(AppState::Loading)))
+        .add_system(prepare_assets.in_schedule(OnExit(AppState::Loading)))
         .add_systems(
             (
                 // debug_tiles,
@@ -180,6 +186,8 @@ fn main() {
                 change_weapon_item,
                 end_switch_magic,
                 end_switch_weapon,
+                update_energy_ui,
+                update_health_ui,
             )
                 .in_set(OnUpdate(AppState::Playing)),
         )
@@ -189,12 +197,15 @@ fn main() {
                 spawn_weapon,
                 spawn_magic,
                 end_enemy_attack,
-                end_enemy_hit,
+                handle_enemy_hit,
+                handle_player_hit,
                 end_player_attack,
                 move_enemy,
                 render_player,
                 render_enemy,
                 update_depth,
+                handle_collisions,
+                handle_player_collisions,
                 handle_weapon_collisions,
             )
                 .in_set(OnUpdate(AppState::Playing)),
@@ -439,7 +450,6 @@ fn spawn_tile(
             ..Default::default()
         },
         RigidBody::Fixed,
-        ActiveEvents::COLLISION_EVENTS,
         Layer(*layer_type),
     ));
 
@@ -451,7 +461,11 @@ fn spawn_tile(
         ));
 
         if layer_type.is_attackable() {
-            child.insert((Attackable::new(1), OBJECTS_COLLISION_GROUP.clone()));
+            child.insert((
+                Attackable::new(1),
+                OBJECTS_COLLISION_GROUP.clone(),
+                ActiveEvents::COLLISION_EVENTS,
+            ));
         }
     });
 }

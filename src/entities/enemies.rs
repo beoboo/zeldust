@@ -220,26 +220,21 @@ pub fn spawn_enemy(
             RigidBody::Dynamic,
             GravityScale(0.0),
             LockedAxes::ROTATION_LOCKED,
-            ActiveEvents::COLLISION_EVENTS,
             Velocity::zero(),
             Animation::new(ANIMATION_DURATION),
             enemy,
+            Attackable::new(health),
+            Collider::cuboid(rect.width() / 2.0, rect.height() / 2.0),
+            ENEMY_ATTACK_COLLISION_GROUP.clone(),
+            Sensor,
+            ColliderDebugColor(Color::RED),
         ))
         .with_children(|parent| {
-            // Collider for attacks
-            parent.spawn((
-                Attackable::new(health),
-                Collider::cuboid(rect.width() / 2.0, rect.height() / 2.0),
-                ENEMY_ATTACK_COLLISION_GROUP.clone(),
-                ColliderDebugColor(Color::RED),
-            ));
-
             // Collider for movements
             parent.spawn((
                 Attackable::new(health),
                 Collider::cuboid(collider_width, collider_height),
                 ENEMY_MOVE_COLLISION_GROUP.clone(),
-                // Transform::from_xyz(0.0, -offset, transform.translation.z - 1.0),
                 ColliderDebugColor(Color::DARK_GRAY),
             ));
         });
@@ -313,7 +308,7 @@ pub fn end_enemy_attack(
     }
 }
 
-pub fn end_enemy_hit(
+pub fn handle_enemy_hit(
     mut commands: Commands,
     time: Res<Time>,
     mut entity_q: Query<(Entity, &mut Enemy, &mut HitTimer, &mut TextureAtlasSprite)>,

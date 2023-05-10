@@ -18,7 +18,7 @@ pub struct AttackTimer(pub Timer);
 #[derive(Component, Deref, DerefMut)]
 pub struct HitTimer(pub Timer);
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct Attackable {
     health: u32,
 }
@@ -28,7 +28,7 @@ impl Attackable {
         Self { health }
     }
 
-    pub fn update(&mut self, damage: u32) -> u32 {
+    pub fn hit(&mut self, damage: u32) -> u32 {
         if self.health > damage {
             self.health -= damage;
         } else {

@@ -3,7 +3,7 @@ use parse_display::Display;
 
 use crate::{
     constants::SWITCH_ITEM_DURATION,
-    entities::{StatType, Stats},
+    entities::Player,
     frames::TexturePack,
     magic::Magic,
     weapon::Weapon,
@@ -30,6 +30,12 @@ pub struct SwitchMagicTimer(pub Timer);
 
 #[derive(Component, Resource, Deref, DerefMut)]
 pub struct SwitchWeaponTimer(pub Timer);
+
+#[derive(Component)]
+pub struct HealthBar;
+
+#[derive(Component)]
+pub struct EnergyBar;
 
 #[derive(Clone, Copy, Display)]
 pub enum ItemBoxType {
@@ -69,8 +75,6 @@ pub fn spawn_ui(
     assets: Res<GameAssets>,
     textures: Res<Assets<TexturePack>>,
 ) {
-    let stats = Stats::default();
-
     // Top content
     commands
         .spawn(NodeBundle {
@@ -87,17 +91,20 @@ pub fn spawn_ui(
         .with_children(|parent| {
             spawn_bar(
                 parent,
-                stats.ratio(StatType::Health) * HEALTH_BAR_WIDTH,
+                0.0,
                 HEALTH_BAR_WIDTH,
                 HEALTH_COLOR,
                 UiRect::top(Val::Px(0.0)),
+                HealthBar,
             );
+
             spawn_bar(
                 parent,
-                stats.ratio(StatType::Energy) * ENERGY_BAR_WIDTH,
+                0.0,
                 ENERGY_BAR_WIDTH,
                 ENERGY_COLOR,
                 UiRect::top(Val::Px(2. * PADDING)),
+                EnergyBar,
             );
         });
 
@@ -159,7 +166,14 @@ pub fn spawn_ui(
         });
 }
 
-fn spawn_bar(parent: &mut ChildBuilder, width: f32, max_width: f32, color: Color, position: UiRect) {
+fn spawn_bar<B: Bundle>(
+    parent: &mut ChildBuilder,
+    width: f32,
+    max_width: f32,
+    color: Color,
+    position: UiRect,
+    bundle: B,
+) {
     parent
         .spawn(NodeBundle {
             style: Style {
@@ -173,7 +187,7 @@ fn spawn_bar(parent: &mut ChildBuilder, width: f32, max_width: f32, color: Color
             ..default()
         })
         .with_children(|parent| {
-            parent.spawn(ImageBundle {
+            let mut cmds = parent.spawn(ImageBundle {
                 style: Style {
                     size: Size::width(Val::Px(width)),
                     ..default()
@@ -181,6 +195,8 @@ fn spawn_bar(parent: &mut ChildBuilder, width: f32, max_width: f32, color: Color
                 background_color: color.into(),
                 ..default()
             });
+
+            cmds.insert(bundle);
         });
 }
 
@@ -372,4 +388,20 @@ pub fn end_switch_weapon(
             commands.remove_resource::<SwitchWeaponTimer>();
         }
     }
+}
+
+pub fn update_health_ui(player_q: Query<&Player>, mut health_q: Query<&mut Style, With<HealthBar>>) {
+    let player = player_q.single();
+
+    let mut health = health_q.single_mut();
+
+    health.size.width = Val::Px(player.health.ratio() * HEALTH_BAR_WIDTH);
+}
+
+pub fn update_energy_ui(player_q: Query<&Player>, mut energy_q: Query<&mut Style, With<EnergyBar>>) {
+    let player = player_q.single();
+
+    let mut energy = energy_q.single_mut();
+
+    energy.size.width = Val::Px(player.energy.ratio() * ENERGY_BAR_WIDTH);
 }
