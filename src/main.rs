@@ -433,7 +433,7 @@ fn spawn_tile(
         ));
 
         if layer_type.is_attackable() {
-            child.insert(Attackable);
+            child.insert(Attackable::new(1));
         }
     });
 }

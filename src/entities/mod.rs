@@ -16,7 +16,27 @@ mod player;
 pub struct AttackTimer(pub Timer);
 
 #[derive(Component)]
-pub struct Attackable;
+pub struct Attackable {
+    health: u32,
+}
+
+impl Attackable {
+    pub fn new(health: u32) -> Self {
+        Self {
+            health
+        }
+    }
+
+    pub fn update(&mut self, damage: u32) -> u32 {
+        if self.health > damage {
+            self.health -= damage;
+        } else {
+            self.health = 0;
+        }
+
+        self.health
+    }
+}
 
 #[derive(Debug, Clone, Copy, Display, PartialEq, Reflect)]
 #[display(style = "snake_case")]

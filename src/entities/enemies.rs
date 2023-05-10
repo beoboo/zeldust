@@ -2,13 +2,12 @@ use bevy::{math::Vec3Swizzles, prelude::*};
 use bevy_rapier2d::prelude::*;
 use parse_display::Display;
 
+use crate::entities::Attackable;
 use crate::{
     constants::{ANIMATION_DURATION, ATTACK_DURATION, SPEED, TILE_SIZE},
-    entities::{AnimatedEntity, Animation, AttackTimer, Player, render_animation, Status},
+    entities::{render_animation, AnimatedEntity, Animation, AttackTimer, Player, Status},
     frames::TexturePack,
-    from_position,
-    GameAssets,
-    GameAssetType,
+    from_position, GameAssetType, GameAssets,
 };
 
 pub enum AttackType {
@@ -184,10 +183,11 @@ pub fn spawn_enemy(
     let atlas = atlases.get(atlas_handle).unwrap();
     let rect = atlas.textures[index];
     let offset = (rect.height() - TILE_SIZE) / 2.0;
-
     let y = y - offset;
+    let collider_height = TILE_SIZE / 2.0;
 
-    // let collider_height = TILE_SIZE / 2.0;
+    let enemy = Enemy::new(ty);
+    let health = enemy.health();
 
     commands
         .spawn((
@@ -203,14 +203,15 @@ pub fn spawn_enemy(
             ActiveEvents::COLLISION_EVENTS,
             Velocity::zero(),
             Animation::new(ANIMATION_DURATION),
-            Enemy::new(ty),
+            enemy,
         ))
         .with_children(|parent| {
             parent.spawn((
-                // Collider::cuboid(rect.width() / 2.0, collider_height / 2.0),
-                // Transform::from_xyz(0.0, -offset, 0.0),
-                // ColliderDebugColor(Color::RED),
-                ));
+                Attackable::new(health),
+                Collider::cuboid(rect.width() / 2.0, collider_height / 2.0),
+                Transform::from_xyz(0.0, -offset, 0.0),
+                ColliderDebugColor(Color::RED),
+            ));
         });
 }
 

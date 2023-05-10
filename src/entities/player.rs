@@ -31,6 +31,10 @@ impl Default for Player {
 }
 
 impl Player {
+    pub fn damage(&self) -> u32 {
+        10
+    }
+
     pub fn is_moving(&self) -> bool {
         matches!(self.status, Status::Move(_))
     }
