@@ -6,7 +6,7 @@ use crate::events::SwitchWeapon;
 use crate::frames::TexturePack;
 use crate::player::Direction;
 use crate::player::Player;
-use crate::GameAssets;
+use crate::{GameAssetType, GameAssets};
 
 #[derive(Component)]
 pub struct PlayerWeapon;
@@ -85,7 +85,7 @@ pub fn spawn_weapon(
     let direction = player.direction;
     let weapon = *current_weapon;
 
-    let name = format!("{weapon}_{direction}.png");
+    let name = format!("weapons/{weapon}/{direction}.png");
     let handle = asset_server.load("textures/weapons.json");
     let pack = textures.get(&handle).expect("Texture pack must exist");
     let index = pack.index_of(&name);
@@ -105,7 +105,7 @@ pub fn spawn_weapon(
         parent.spawn((
             SpriteSheetBundle {
                 sprite: TextureAtlasSprite::new(index),
-                texture_atlas: assets.weapons.clone(),
+                texture_atlas: assets.get(GameAssetType::Weapons).clone(),
                 transform: Transform::from_translation(translation.extend(0.0)),
                 ..Default::default()
             },

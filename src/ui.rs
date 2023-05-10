@@ -7,7 +7,7 @@ use crate::magic::Magic;
 use crate::player::{StatType, Stats};
 use crate::weapon::Weapon;
 use crate::widgets::{AtlasImageBundle, UiAtlasImage};
-use crate::GameAssets;
+use crate::{GameAssetType, GameAssets};
 
 const MARGIN: f32 = 10.;
 const PADDING: f32 = 2.;
@@ -39,14 +39,14 @@ pub enum ItemBoxType {
 impl ItemBoxType {
     pub fn name(&self) -> String {
         match self {
-            ItemBoxType::Magic(m, _) => format!("{m}"),
-            ItemBoxType::Weapon(w, _) => format!("{w}"),
+            ItemBoxType::Magic(m, _) => format!("particles/{m}"),
+            ItemBoxType::Weapon(w, _) => format!("weapons/{w}"),
         }
     }
 
     pub fn asset_name(&self) -> &str {
         match self {
-            ItemBoxType::Magic(_, _) => "magics",
+            ItemBoxType::Magic(_, _) => "particles",
             ItemBoxType::Weapon(_, _) => "weapons",
         }
     }
@@ -195,7 +195,7 @@ fn spawn_item_box(
     textures: &Res<Assets<TexturePack>>,
     margin: UiRect,
 ) {
-    let name = format!("{}_full.png", ty.name());
+    let name = format!("{}/full.png", ty.name());
     let asset_name = format!("textures/{}.json", ty.asset_name());
     println!("{name} from {asset_name}");
 
@@ -218,11 +218,11 @@ fn spawn_item_box(
     let atlas = match ty {
         ItemBoxType::Magic(_, m) => {
             commands.insert(m);
-            assets.magics.clone()
+            assets.get(GameAssetType::Particles).clone()
         }
         ItemBoxType::Weapon(_, w) => {
             commands.insert(w);
-            assets.weapons.clone()
+            assets.get(GameAssetType::Weapons).clone()
         }
     };
 
@@ -310,8 +310,8 @@ pub fn change_magic_item(
         for (mut image, mut magic) in magic_q.iter_mut() {
             *magic = current_magic;
 
-            let name = format!("{current_magic}_full.png");
-            let handle = asset_server.load("textures/magics.json");
+            let name = format!("particles/{current_magic}/full.png");
+            let handle = asset_server.load("textures/particles.json");
             let pack = textures.get(&handle).expect("Texture pack must exist");
 
             image.index = pack.index_of(&name);
@@ -361,7 +361,7 @@ pub fn change_weapon_item(
         for (mut image, mut weapon) in weapon_q.iter_mut() {
             *weapon = current_weapon;
 
-            let name = format!("{current_weapon}_full.png");
+            let name = format!("weapons/{current_weapon}/full.png");
             let handle = asset_server.load("textures/weapons.json");
             let pack = textures.get(&handle).expect("Texture pack must exist");
 

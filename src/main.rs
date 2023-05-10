@@ -7,15 +7,18 @@ use bevy_common_assets::json::JsonAssetPlugin;
 use bevy_inspector_egui::quick::{ResourceInspectorPlugin, WorldInspectorPlugin};
 use bevy_prototype_lyon::prelude::*;
 use bevy_rapier2d::prelude::*;
+use enum_iterator::{all, Sequence};
+use parse_display::Display;
 
 use crate::constants::{CAMERA_SCALE, SCREEN_HEIGHT, SCREEN_WIDTH, TILE_SIZE};
+use crate::enemies::{spawn_enemy, Enemy};
 use crate::events::{SwitchMagic, SwitchWeapon};
 use crate::frames::TexturePack;
+use crate::input::handle_input;
 use crate::magic::{spawn_magic, switch_magic, Magic};
 use crate::map::{LayerType, WorldMap};
 use crate::player::{
-    end_attack, handle_input, move_camera, render_player, spawn_player, update_player_position,
-    Player,
+    end_attack, move_camera, render_player, spawn_player, update_player_position, Player,
 };
 use crate::ui::{
     change_magic_item, change_weapon_item, end_switch_magic, end_switch_weapon, spawn_ui,
@@ -29,6 +32,7 @@ mod constants;
 mod enemies;
 mod events;
 mod frames;
+mod input;
 mod layer;
 mod magic;
 mod map;
@@ -74,12 +78,36 @@ pub struct Map;
 #[derive(Component)]
 pub struct StaticCollider;
 
+#[derive(Debug, Clone, Copy, Display, PartialEq, Eq, Hash, Sequence)]
+#[display(style = "snake_case")]
+pub enum GameAssetType {
+    Grass,
+    Monsters,
+    Objects,
+    Particles,
+    Player,
+    Weapons,
+}
+
+impl From<&LayerType> for GameAssetType {
+    fn from(layer: &LayerType) -> Self {
+        match layer {
+            LayerType::Grass => GameAssetType::Grass,
+            LayerType::Objects => GameAssetType::Objects,
+            _ => unreachable!(),
+        }
+    }
+}
+
 #[derive(Resource)]
 pub struct GameAssets {
-    player: Handle<TextureAtlas>,
-    magics: Handle<TextureAtlas>,
-    weapons: Handle<TextureAtlas>,
-    layers: HashMap<LayerType, Handle<TextureAtlas>>,
+    handles: HashMap<GameAssetType, Handle<TextureAtlas>>,
+}
+
+impl GameAssets {
+    pub fn get(&self, ty: GameAssetType) -> &Handle<TextureAtlas> {
+        &self.handles[&ty]
+    }
 }
 
 #[derive(Default, Resource)]
@@ -105,8 +133,9 @@ fn main() {
         .add_plugin(JsonAssetPlugin::<TexturePack>::new(&["json"]))
         .add_plugin(WidgetsPlugin)
         .add_plugin(ResourceInspectorPlugin::<Weapon>::default())
-        .register_type::<Player>()
+        .register_type::<Enemy>()
         .register_type::<MagicItemBox>()
+        .register_type::<Player>()
         .register_type::<WeaponItemBox>()
         .add_event::<SwitchMagic>()
         .add_event::<SwitchWeapon>()
@@ -170,7 +199,7 @@ fn load_ground(asset_server: Res<AssetServer>, mut assets: ResMut<LoadingAssets>
 }
 
 fn load_assets(asset_server: Res<AssetServer>, mut assets: ResMut<LoadingAssets>) {
-    for ty in vec!["grass", "magics", "objects", "player", "weapons"] {
+    for ty in all::<GameAssetType>() {
         for asset in vec!["json", "png"] {
             let path = format!("textures/{ty}.{asset}");
             let handle = asset_server.load_untyped(path);
@@ -219,62 +248,28 @@ fn prepare_assets(
 
     commands.insert_resource(size);
 
-    let player_atlas_handle = build_texture_atlas(
-        "player",
-        &asset_server,
-        &mut images,
-        &mut texture_atlases,
-        &tiles_data,
-    );
+    let handles = all::<GameAssetType>()
+        .map(|ty| {
+            (
+                ty,
+                build_texture_atlas(
+                    ty,
+                    &asset_server,
+                    &mut images,
+                    &mut texture_atlases,
+                    &tiles_data,
+                ),
+            )
+        })
+        .collect::<HashMap<_, _>>();
 
-    let magics_atlas_handle = build_texture_atlas(
-        "magics",
-        &asset_server,
-        &mut images,
-        &mut texture_atlases,
-        &tiles_data,
-    );
-
-    let weapons_atlas_handle = build_texture_atlas(
-        "weapons",
-        &asset_server,
-        &mut images,
-        &mut texture_atlases,
-        &tiles_data,
-    );
-
-    let mut layers = HashMap::new();
-
-    let texture_atlas_handle = build_texture_atlas(
-        "grass",
-        &asset_server,
-        &mut images,
-        &mut texture_atlases,
-        &tiles_data,
-    );
-    layers.insert(LayerType::Grass, texture_atlas_handle);
-
-    let texture_atlas_handle = build_texture_atlas(
-        "objects",
-        &asset_server,
-        &mut images,
-        &mut texture_atlases,
-        &tiles_data,
-    );
-    layers.insert(LayerType::Objects, texture_atlas_handle);
-
-    let assets = GameAssets {
-        player: player_atlas_handle,
-        magics: magics_atlas_handle,
-        weapons: weapons_atlas_handle,
-        layers,
-    };
+    let assets = GameAssets { handles };
 
     commands.insert_resource(assets);
 }
 
 fn build_texture_atlas(
-    ty: &str,
+    ty: GameAssetType,
     asset_server: &Res<AssetServer>,
     images: &mut ResMut<Assets<Image>>,
     texture_atlases: &mut ResMut<Assets<TextureAtlas>>,
@@ -336,7 +331,7 @@ fn spawn_cameras(mut commands: Commands, map_size: Res<MapSize>) {
         ..default()
     };
 
-    commands.spawn((camera));
+    commands.spawn(camera);
 }
 //
 // fn debug_tiles(
@@ -364,6 +359,7 @@ fn spawn_tiles(
     assets: Res<GameAssets>,
     asset_server: Res<AssetServer>,
     atlases: Res<Assets<TextureAtlas>>,
+    textures: Res<Assets<TexturePack>>,
 ) {
     let window = window.single();
 
@@ -382,6 +378,18 @@ fn spawn_tiles(
                             &assets,
                             &atlases,
                             layer_type,
+                            cell,
+                            x,
+                            y,
+                        );
+                    }
+                    390..=393 => {
+                        spawn_enemy(
+                            &mut commands,
+                            &window,
+                            &asset_server,
+                            &assets,
+                            &textures,
                             cell,
                             x,
                             y,
@@ -415,8 +423,9 @@ fn spawn_tile(
     y: f32,
 ) {
     let index = layer_type.to_index(cell as usize);
+    let asset_type = layer_type.into();
 
-    let atlas_handle = &assets.layers[layer_type];
+    let atlas_handle = assets.get(asset_type);
     let atlas = atlases.get(atlas_handle).unwrap();
     let image = atlas.textures[index];
     let offset = (image.height() - TILE_SIZE) / 2.0;

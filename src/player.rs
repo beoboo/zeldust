@@ -1,4 +1,3 @@
-use std::cell::RefMut;
 use std::time::Duration;
 
 use bevy::prelude::*;
@@ -6,10 +5,9 @@ use bevy::utils::HashMap;
 use bevy_rapier2d::prelude::*;
 use parse_display::Display;
 
-use crate::events::{SwitchMagic, SwitchWeapon};
 use crate::frames::TexturePack;
-use crate::weapon::{PlayerWeapon, Weapon};
-use crate::{from_position, GameAssets, Size, StaticCollider};
+use crate::weapon::PlayerWeapon;
+use crate::{from_position, GameAssetType, GameAssets, Size};
 
 #[derive(Component, Deref)]
 pub struct AttackTimer(pub Timer);
@@ -114,8 +112,8 @@ pub fn spawn_player(
     commands
         .spawn((
             SpriteSheetBundle {
-                sprite: TextureAtlasSprite::new(4),
-                texture_atlas: assets.player.clone(),
+                sprite: TextureAtlasSprite::new(0),
+                texture_atlas: assets.get(GameAssetType::Player).clone(),
                 transform: Transform::from_translation(from_position(x, y, window)),
                 ..Default::default()
             },
@@ -136,85 +134,6 @@ pub fn spawn_player(
                 ColliderDebugColor(Color::RED),
             ));
         });
-}
-
-pub fn handle_input(
-    mut commands: Commands,
-    keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<
-        (Entity, &mut Player, &mut Velocity, &mut AnimationTimer),
-        Without<StaticCollider>,
-    >,
-    mut switch_weapon: EventWriter<SwitchWeapon>,
-    mut switch_magic: EventWriter<SwitchMagic>,
-    weapon: Res<Weapon>,
-) {
-    let mut vec = Vec2::default();
-
-    let (entity, mut player, mut velocity, mut animation_timer) = query.single_mut();
-
-    if player.is_attacking {
-        return;
-    }
-
-    for key in keyboard_input.get_pressed() {
-        match key {
-            KeyCode::Left => {
-                vec.x = -1.0;
-                player.direction = Direction::Left;
-            }
-            KeyCode::Right => {
-                vec.x = 1.0;
-                player.direction = Direction::Right;
-            }
-            KeyCode::Up => {
-                vec.y = 1.0;
-                player.direction = Direction::Up;
-            }
-            KeyCode::Down => {
-                vec.y = -1.0;
-                player.direction = Direction::Down;
-            }
-            _ => (),
-        }
-    }
-
-    for key in keyboard_input.get_just_pressed() {
-        match key {
-            KeyCode::Space => {
-                player.is_attacking = true;
-                commands.entity(entity).insert(AttackTimer(Timer::new(
-                    Duration::from_millis(weapon.cooldown() as _),
-                    TimerMode::Once,
-                )));
-            }
-            KeyCode::LControl => {
-                player.is_attacking = true;
-                // commands
-                //     .entity(entity)
-                //     .insert(MagicTimer(Timer::new(Duration::from_millis(weapon.cooldown() as _), TimerMode::Once)));
-            }
-            KeyCode::Q => {
-                switch_weapon.send(SwitchWeapon);
-            }
-            KeyCode::E => {
-                switch_magic.send(SwitchMagic);
-            }
-            _ => (),
-        }
-    }
-
-    if vec != Vec2::ZERO && !player.is_attacking {
-        velocity.linvel = vec * player.speed;
-
-        if player.status != Status::Move {
-            player.status = Status::Move;
-            animation_timer.pause();
-        }
-    } else {
-        velocity.linvel = Vec2::ZERO;
-        player.status = Status::Idle;
-    }
 }
 
 pub fn update_player_position(mut query: Query<(&mut Transform, Ref<Velocity>), With<Player>>) {
@@ -255,7 +174,7 @@ pub fn render_player(
         ""
     };
 
-    let name = format!("{status}_{direction}{postfix}.png");
+    let name = format!("player/{status}/{direction}{postfix}.png");
     let handle = asset_server.load("textures/player.json");
     let pack = textures.get(&handle).expect("Texture pack must exist");
     let index = pack.index_of(&name);

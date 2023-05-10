@@ -5,13 +5,13 @@
   "savePath": "",
   "images": [],
   "folders": [
-    "/Users/pietroatzeni/works/rust/zeldust-bevy/assets/images/grass"
+    "/Users/pietroatzeni/works/rust/zeldust-bevy/assets/images/particles"
   ],
   "packOptions": {
-    "textureName": "grass",
+    "textureName": "particles",
     "textureFormat": "png",
     "removeFileExtension": false,
-    "prependFolderName": false,
+    "prependFolderName": true,
     "base64Export": false,
     "tinify": false,
     "tinifyKey": "",
