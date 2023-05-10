@@ -1,6 +1,6 @@
-use bevy::input::keyboard::KeyboardInput;
 use bevy::prelude::*;
-use crate::Position;
+use bevy::sprite::collide_aabb::{collide, Collision};
+use crate::{MapBorder, Position, Size};
 
 #[derive(Component)]
 pub struct Player {
@@ -9,17 +9,23 @@ pub struct Player {
 
 pub struct PlayerPositionEvent(Position);
 
+enum Axis {
+    Horizontal,
+    Vertical,
+}
+
 impl Default for Player {
     fn default() -> Self {
         Self {
-            speed: 5.0,
+            speed: 10.0,
         }
     }
 }
 
 pub fn move_player(
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<(&Player, &mut Position)>,
+    mut players: Query<(&Player, &Transform, &Size, &mut Position), Without<MapBorder>>,
+    borders: Query<(&MapBorder, &Transform, &Size, &Position), Without<Player>>,
     mut position_writer: EventWriter<PlayerPositionEvent>,
 ) {
     let mut direction = Vec2::default();
@@ -35,9 +41,24 @@ pub fn move_player(
 
     if direction != Vec2::default() {
         let direction = direction.normalize();
-        let (player, mut position) = query.single_mut();
+        let (player, transform, size, mut position) = players.single_mut();
         position.x += player.speed * direction.x;
         position.y += player.speed * direction.y;
+
+        borders.iter().for_each(|(b, t, s, p)| {
+            let v1 = Vec2::new(s.width, s.height);
+            let v2 = Vec2::new(size.width, size.height);
+
+            if let Some(collision) = collide(transform.translation, v2, t.translation, v1) {
+                match collision {
+                    Collision::Left => position.x = p.x - s.width,
+                    Collision::Right => position.x = p.x + s.width,
+                    Collision::Top => position.y = p.y - s.height,
+                    Collision::Bottom => position.y = p.y + s.height,
+                }
+            }
+        });
+
         position_writer.send(PlayerPositionEvent(*position))
     }
 }
